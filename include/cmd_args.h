@@ -129,7 +129,7 @@ namespace cmd_args {
 					for (auto & arg : args) {
 						if (inst.*field_ref = find(keys.begin(), keys.end(), arg.key) != keys.end()) {
 							arg.handled = true;
-							break;
+							return;
 						}
 					}
 
