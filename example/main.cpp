@@ -361,7 +361,7 @@ namespace command_line {
 			range_t range;
 			base_setter_t::unique setter;
 
-			int32_t parent_index;
+			int32_t seq_index;
 		};
 
 		using solution_tree_t = vector < solution_node >;
@@ -377,7 +377,7 @@ namespace command_line {
 
 			inline context_state state() const {
 				return{
-					solution_tree.size(),
+					static_cast < uint32_t > (solution_tree.size()),
 					range
 				};
 			}
@@ -398,7 +398,7 @@ namespace command_line {
 				auto state = cxt.state();
 				if (exp.eval(cxt)) {
 					auto range = state.range.union_with(cxt.range);
-					cxt.exec_queue.push_back(exec_node{
+					cxt.solution_tree.push_back(solution_node {
 						range,
 						make_unique < setter_t < _dest_t, _t > >(address)
 					});
@@ -417,7 +417,7 @@ namespace command_line {
 			_rhe_t rhe;
 
 			inline bool eval(context & cxt) const {
-				return rhe.eval(cxt) && lhe.eval(cxt);
+				return lhe.eval(cxt) && rhe.eval(cxt);
 			}
 		};
 
@@ -434,11 +434,11 @@ namespace command_line {
 
 			inline bool eval(context & cxt) const {
 				auto state = cxt.state();
-				bool valid = rhe.eval(cxt);
+				bool valid = lhe.eval(cxt);
 
 				if (!valid) {
 					cxt.restore(state);
-					valid = lhe.eval(cxt);
+					valid = rhe.eval(cxt);
 				}
 
 				return valid;
