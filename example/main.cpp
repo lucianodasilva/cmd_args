@@ -361,23 +361,26 @@ namespace command_line {
 			range_t range;
 			base_setter_t::unique setter;
 
-			int32_t seq_index;
+			uint32_t seq_index;
 		};
 
 		using solution_tree_t = vector < solution_node >;
 
 		struct context_state {
 			uint32_t solution_len;
-			range_t range;
+			uint32_t parent_node;
+			range_t	 range;
 		};
 
 		struct context {
 			solution_tree_t	solution_tree;
+			uint32_t		parent_node;
 			range_t			range;
 
 			inline context_state state() const {
 				return{
 					static_cast < uint32_t > (solution_tree.size()),
+					parent_node,
 					range
 				};
 			}
@@ -385,6 +388,11 @@ namespace command_line {
 			inline void restore(const context_state & state) {
 				solution_tree.resize(state.solution_len);
 				range = state.range;
+			}
+
+			inline void backtrack(const context_state & state) {
+				range = state.range;
+				parent_node = state.parent_node;
 			}
 		};
 
@@ -400,7 +408,8 @@ namespace command_line {
 					auto range = state.range.union_with(cxt.range);
 					cxt.solution_tree.push_back(solution_node {
 						range,
-						make_unique < setter_t < _dest_t, _t > >(address)
+						make_unique < setter_t < _dest_t, _t > >(address),
+						cxt.parent_node++
 					});
 					return true;
 				}
@@ -436,10 +445,11 @@ namespace command_line {
 				auto state = cxt.state();
 				bool valid = lhe.eval(cxt);
 
-				if (!valid) {
+				cxt.backtrack(state);
+				valid |= rhe.eval(cxt);
+
+				if (!valid)
 					cxt.restore(state);
-					valid = rhe.eval(cxt);
-				}
 
 				return valid;
 			}
@@ -582,13 +592,17 @@ namespace command_line {
 
 		context cxt;
 
+		cxt.parent_node = 0;
 		// reverse range
 		cxt.range = {
 			arg_v,
 			+arg_v + arg_c// ignore first item
 		};
 
-		bool has_valid = exp.eval(cxt) && cxt.range.ended();
+		// check for valid and complete solutions
+		bool has_valid_solutions = exp.eval(cxt) && cxt.range.ended();
+
+		// assemble complete solution
 
 		return false;
 	}
@@ -625,9 +639,8 @@ int main(int arg_c, char * arg_v[]) {
 	auto usage_default_values = +any()[&demo::files];
 	
 	auto expression =
-		usage_options >> usage_default_values |
-		key("-v") |
-		key("-h")
+		usage_options |
+		usage_options >> usage_default_values;
 	;
 	
 	parse(expression, 7, args);
