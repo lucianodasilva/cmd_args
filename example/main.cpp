@@ -1,5 +1,6 @@
 //#include "cmd_args.h"
 #include <iostream>
+#include <functional>
 
 //using namespace cmd_args;
 
@@ -45,35 +46,35 @@ namespace command_line {
 				return{ v2.it, v1.it };
 		}
 
-		// value setter abstraction
-		struct base_setter_t {
-			using unique = unique_ptr < base_setter_t >;
-			virtual void set(const range_t & r) = 0;
+		// action
+		struct base_action_t {
+			using unique = unique_ptr < base_action_t >;
+			virtual void run(const range_t & range) const = 0;
 		};
 
-		// setter specialization for single items
+		// setter action specialization for single items
 		template < class _dest_t, class _t >
-		struct setter_t : public base_setter_t {
+		struct setter_t : public base_action_t {
 			_t _dest_t::*address;
 
 			setter_t(_t _dest_t::*address_v) : address(address) {}
 
-			virtual void set(const range_t & r) {}
+			virtual void run(const range_t & r) const override {}
 		};
 
 		// setter specialization for vectors
 		template < class _dest_t, class _t, class ... _other_tv >
-		struct setter_t < _dest_t, vector < _t, _other_tv...> > : public base_setter_t {
+		struct setter_t < _dest_t, vector < _t, _other_tv...> > : public base_action_t {
 			vector < _t, _other_tv...> _dest_t::*address;
 			setter_t(vector < _t, _other_tv...> _dest_t::*address_v) : address(address) {}
 
-			virtual void set(const range_t & r) {}
+			virtual void run(const range_t & r) const override {}
 		};
 
 		// solution building/execution node
 		struct solution_node {
 			range_t range;
-			base_setter_t::unique setter;
+			base_action_t::unique action;
 
 			int sequence_index;
 		};
@@ -99,10 +100,10 @@ namespace command_line {
 
 			inline solution_tree_t() : parent_node(-1) {}
 
-			inline void add_node (const range_t & rng, base_setter_t * setter ) {
+			inline void add_node (const range_t & rng, base_action_t * setter ) {
 				tree.push_back(solution_node{
 					rng,
-					unique_ptr < base_setter_t >(setter),
+					unique_ptr < base_action_t >(setter),
 					parent_node++
 				});
 			}
@@ -370,7 +371,7 @@ namespace command_line {
 
 				while (i != -1) {
 					auto & node = tree[i];
-					node.setter->set(node.range);
+					node.action->run(node.range);
 					i = node.sequence_index;
 				}
 			}
@@ -380,12 +381,26 @@ namespace command_line {
 
 	}
 
+	// scanner methods
 	inline details::value_t key(const char * k) {
 		return{ k };
 	}
 
 	inline details::any_t any() { return{}; }
 
+	// create parameterless callback expression
+	template < class _exp_t >
+	inline auto usage(void(*callback)(), const _exp_t & exp) {
+		return exp;
+	}
+
+	// create expression callback with parameter
+	template < class _out_t, class _exp_t >
+	inline auto usage(void (*callback)(_out_t &), const _exp_t & exp ) {
+		return exp;
+	}
+
+	// parser 
 	template < class _exp_t >
 	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v) {
 		using namespace details;
@@ -406,7 +421,6 @@ namespace command_line {
 
 }
 
-
 struct demo {
 	float	xxx;
 	float	yyy;
@@ -417,6 +431,10 @@ struct demo {
 	bool show_version;
 	bool show_help;
 };
+
+void main_usage(demo & d) {}
+
+void show_version() {}
 
 int main(int arg_c, char * arg_v[]) {
 
@@ -436,8 +454,9 @@ int main(int arg_c, char * arg_v[]) {
 	auto usage_default_values = +any()[&demo::files];
 	
 	auto expression =
-		usage_options >> usage_default_values |
-		usage_options
+		usage (&main_usage,		usage_options >> usage_default_values) | //.desc ("yada yada yada ayad acoiso e tal") |
+		usage (&main_usage,		usage_options) | //.desc ("coiso e tal")
+		usage (&show_version,	key("-v"))
 	;
 	
 	parse (expression, 7, args);
