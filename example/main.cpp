@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 using namespace std;
 
@@ -24,12 +25,12 @@ namespace command_line {
 
 		// domain iterator range 
 		struct range_t {
-			const char 
-				** it, 
+			const char
+				** it,
 				** end;
 
 			// returns true if range is length is zero
-			inline bool finished () const { return it == end; }
+			inline bool finished() const { return it == end; }
 
 			// consume first item in range and return it's value
 			inline const char * consume() {
@@ -38,7 +39,7 @@ namespace command_line {
 		};
 
 		// merge two ranges together
-		// (TODO: this name and operator does not correctly represent method)
+		// (TODO: this name and operator does not correctly represent function)
 		inline range_t operator && (const range_t & v1, const range_t & v2) {
 			if (distance(v1.it, v2.it) > 0)
 				return{ v1.it, v2.it };
@@ -49,7 +50,7 @@ namespace command_line {
 		// action
 		template < class _settings_t >
 		struct base_action_t {
-			virtual void run(const range_t & rangea, _settings_t & settings) const = 0;
+			virtual void run(const range_t & range, _settings_t & settings) const = 0;
 		};
 
 		// setter action specialization for single items
@@ -75,8 +76,8 @@ namespace command_line {
 
 		// setter specialization for vectors
 		template < class _settings_t, class _t, class ... _other_tv >
-		struct setter_t < _settings_t, vector < _t, _other_tv...> > : public base_action_t < _settings_t > {
-			using field_t = vector < _t, _other_tv...>;
+		struct setter_t < _settings_t, std::vector < _t, _other_tv...> > : public base_action_t < _settings_t > {
+			using field_t = std::vector < _t, _other_tv...> _settings_t::*;
 
 			field_t address;
 
@@ -84,6 +85,37 @@ namespace command_line {
 
 			virtual void run(const range_t & r, _settings_t & settings) const override {
 				// same implementation as before
+			}
+		};
+
+		// callback action
+		template < class _settings_t, class _method_t >
+		struct callback_t;;
+
+		template < class _settings_t >
+		struct callback_t < _settings_t, void(*)(_settings_t) > : public base_action_t < _settings_t > {
+			using function_t = void(*)(_settings_t);
+
+			function_t callback;
+
+			callback_t(function_t callback_v) : callback(callback_v) {}
+
+			virtual void run(const range_t & r, _settings_t & settings) const override {
+				// implement callback
+			}
+		};
+
+		// callback no parameter action
+		template < class _settings_t >
+		struct callback_t < _settings_t, void (*)() > : public base_action_t < _settings_t > {
+			using function_t = void(*)();
+
+			function_t callback;
+
+			callback_t(function_t callback_v) : callback(callback_v) {}
+
+			virtual void run(const range_t & r, _settings_t & settings) const override {
+				// implement callback
 			}
 		};
 
@@ -154,8 +186,9 @@ namespace command_line {
 
 		template < class _settings_t >
 		struct context {
-			range_t			range;
+			range_t							range;
 			solution_tree_t	< _settings_t > solution_tree;
+			_settings_t						settings;
 
 			inline context_state state() const {
 				return {
@@ -175,7 +208,7 @@ namespace command_line {
 			}
 		};
 
-		// setter_t
+		// setter operation
 		template < class _exp_t, class _settings_t, class _t >
 		struct setter_op {
 			using field_t = _t _settings_t::*;
@@ -183,7 +216,8 @@ namespace command_line {
 			_exp_t exp;
 			field_t address;
 
-			inline bool eval(context < _settings_t > & cxt) const {
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
 				auto state = cxt.state();
 				if (exp.eval(cxt)) {
 					cxt.solution_tree.add_node(
@@ -207,14 +241,46 @@ namespace command_line {
 			}
 		};
 
+		// callback operation
+		template < class _exp_t, class _settings_t, class _method_t >
+		struct callback_op {
+
+			_exp_t exp;
+			callback_t < _settings_t, _method_t > callback;
+
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
+				auto state = cxt.state();
+				if (exp.eval(cxt)) {
+					cxt.solution_tree.add_node(
+						state.range && cxt.range,
+						new callback_t < _settings_t, _method_t >(callback)
+						);
+
+					return true;
+				}
+				return false;
+			}
+		};
+
+		template < class _derived_t, class _settings_t >
+		struct callback_container_t {
+
+			template < class _method_t >
+			inline auto operator [] (_method_t callback) {
+				return callback_op < _settings_t, _method_t >(callback);
+			}
+
+		};
+
 		// sequence
 		template < class _lhe_t, class _rhe_t >
 		struct seq_op {
 			_lhe_t lhe;
 			_rhe_t rhe;
 
-			template < class settings_t > 
-			inline bool eval(context < settings_t > & cxt) const {
+			template < class cxt_t > 
+			inline bool eval(cxt_t & cxt) const {
 				return lhe.eval(cxt) && rhe.eval(cxt);
 			}
 		};
@@ -230,8 +296,8 @@ namespace command_line {
 			_lhe_t lhe;
 			_rhe_t rhe;
 
-			template < class settings_t >
-			inline bool eval(context < settings_t > & cxt) const {
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
 				auto
 					state = cxt.state(),
 					lhe_state = state;
@@ -269,8 +335,8 @@ namespace command_line {
 		struct z_one_op {
 			_exp_t exp;
 
-			template < class settings_t >
-			inline bool eval(context < settings_t > & cxt) const {
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
 				auto state = context_state();
 
 				if (!exp.eval(cxt))
@@ -290,8 +356,8 @@ namespace command_line {
 		struct one_n_op {
 			_exp_t exp;
 
-			template < class settings_t >
-			inline bool eval(context < settings_t > & cxt) const {
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
 				bool one_valid = exp.eval(cxt);
 
 				if (one_valid) {
@@ -318,8 +384,8 @@ namespace command_line {
 		struct z_n_op {
 			_exp_t exp;
 
-			template < class settings_t >
-			inline bool eval(context < settings_t > & cxt) const {
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
 				auto state = context_state();
 
 				do {
@@ -339,13 +405,13 @@ namespace command_line {
 		}
 
 		// scaners
-		struct value_t : public setter_container_t < value_t > {
+		struct value_t : setter_container_t < value_t > {
 			const char * key;
 
 			inline value_t ( const char * key_v ) : key (key_v) {}
 
-			template < class settings_t > 
-			inline bool eval(context < settings_t > & cxt) const {
+			template < class cxt_t > 
+			inline bool eval(cxt_t & cxt) const {
 				if (cxt.range.finished ())
 					return false;
 
@@ -354,10 +420,10 @@ namespace command_line {
 			}
 		};
 
-		struct any_t : public setter_container_t < any_t > {
+		struct any_t : setter_container_t < any_t > {
 
-			template < class settings_t >
-			inline bool eval(context < settings_t > & cxt) const {
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
 				if (cxt.range.finished())
 					return false;
 
@@ -365,6 +431,20 @@ namespace command_line {
 				return true;
 			}
 
+		};
+
+		// usage wrapper
+		template < class _exp_t >
+		struct usage_op {//: callback_container_t < usage_op < _exp_t > > {
+
+			_exp_t exp;
+
+			template < class cxt_t >
+			inline bool eval(cxt_t & cxt) const {
+				return exp.eval(cxt);
+			}
+
+			inline usage_op (const _exp_t & e) : exp(e) {}
 		};
 
 		// solution node inversion and execution
@@ -403,7 +483,7 @@ namespace command_line {
 
 				while (i != -1) {
 					auto & node = tree[i];
-					node.action->run(node.range);
+					node.action->run(node.range, cxt.settings);
 					i = node.sequence_index;
 				}
 			}
@@ -420,20 +500,14 @@ namespace command_line {
 
 	inline details::any_t any() { return{}; }
 
-	// create parameterless callback expression
+	// create callback expression
 	template < class _exp_t >
-	inline auto usage(void(*callback)(), const _exp_t & exp) {
-		return exp;
-	}
-
-	// create expression callback with parameter
-	template < class _settings_t, class _exp_t >
-	inline auto usage(void (*callback)(_settings_t &), const _exp_t & exp ) {
-		return exp;
+	inline auto usage(const _exp_t & exp) {
+		return details::usage_op < _exp_t > ( exp );
 	}
 
 	// parser 
-	template < class _exp_t >
+	template < class settings_t, class _exp_t = void >
 	inline bool parse(const _exp_t & exp, int arg_c, const char ** arg_v) {
 		using namespace details;
 
@@ -442,7 +516,7 @@ namespace command_line {
 			+arg_v + arg_c
 		};
 
-		context cxt = { s_range };
+		context < settings_t > cxt = { s_range };
 
 		// evaluate solutions
 		exp.eval(cxt);
@@ -485,12 +559,12 @@ int main(int arg_c, char * arg_v[]) {
 	auto usage_default_values = +any()[&demo::files];
 	
 	auto expression =
-		usage (&main_usage,		usage_options >> usage_default_values) | //.desc ("yada yada yada ayad acoiso e tal") |
-		usage (&main_usage,		usage_options) | //.desc ("coiso e tal")
-		usage (&show_version,	key("-v"))
+		usage (usage_options >> usage_default_values) | //.desc ("yada yada yada ayad acoiso e tal") |
+		usage (usage_options) | //.desc ("coiso e tal")
+		usage (key("-v"))
 	;
 	
-	parse (expression, 7, args);
+	parse < demo > (expression, 7, args);
 	
 	//auto val = command_line::value(&demo::xxx, .0F);
 
