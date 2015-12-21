@@ -24,7 +24,7 @@ namespace command_line {
 
 		// domain iterator range 
 		struct range_t {
-			char 
+			const char 
 				** it, 
 				** end;
 
@@ -47,34 +47,51 @@ namespace command_line {
 		}
 
 		// action
+		template < class _settings_t >
 		struct base_action_t {
-			using unique = unique_ptr < base_action_t >;
-			virtual void run(const range_t & range) const = 0;
+			virtual void run(const range_t & rangea, _settings_t & settings) const = 0;
 		};
 
 		// setter action specialization for single items
-		template < class _dest_t, class _t >
-		struct setter_t : public base_action_t {
-			_t _dest_t::*address;
+		template < class _settings_t, class _t >
+		struct setter_t : public base_action_t < _settings_t > {
+			using field_t = _t _settings_t::*;
 
-			setter_t(_t _dest_t::*address_v) : address(address) {}
+			field_t address;
 
-			virtual void run(const range_t & r) const override {}
+			setter_t(field_t address_v) : address(address_v) {}
+
+			virtual void run(const range_t & r, _settings_t & settings) const override {
+				//(TODO: should raise somekind of error)
+				if (r.finished ())
+					return;
+
+				// aditional abstraction needed
+				// perhaps should store processed value and not range...
+				//settings.*address = 
+			}
+			
 		};
 
 		// setter specialization for vectors
-		template < class _dest_t, class _t, class ... _other_tv >
-		struct setter_t < _dest_t, vector < _t, _other_tv...> > : public base_action_t {
-			vector < _t, _other_tv...> _dest_t::*address;
-			setter_t(vector < _t, _other_tv...> _dest_t::*address_v) : address(address) {}
+		template < class _settings_t, class _t, class ... _other_tv >
+		struct setter_t < _settings_t, vector < _t, _other_tv...> > : public base_action_t < _settings_t > {
+			using field_t = vector < _t, _other_tv...>;
 
-			virtual void run(const range_t & r) const override {}
+			field_t address;
+
+			setter_t(field_t address_v) : address(address_v) {}
+
+			virtual void run(const range_t & r, _settings_t & settings) const override {
+				// same implementation as before
+			}
 		};
 
 		// solution building/execution node
+		template < class _settings_t >
 		struct solution_node {
 			range_t range;
-			base_action_t::unique action;
+			unique_ptr < base_action_t < _settings_t > > action;
 
 			int sequence_index;
 		};
@@ -84,13 +101,17 @@ namespace command_line {
 			int		parent_node;
 		};
 
+		template < class _settings_t >
 		struct solution_tree_t {
+		public:
+			using item_t = solution_node < _settings_t >;
+			using vector_t = vector < item_t >;
 		private:
-			vector < solution_node > tree;
+			vector_t tree;
 			int32_t parent_node;
 		public:
 
-			inline solution_node & operator [] (size_t i) {
+			inline item_t & operator [] (size_t i) {
 				return tree[i];
 			}
 
@@ -100,10 +121,10 @@ namespace command_line {
 
 			inline solution_tree_t() : parent_node(-1) {}
 
-			inline void add_node (const range_t & rng, base_action_t * setter ) {
-				tree.push_back(solution_node{
+			inline void add_node (const range_t & rng, base_action_t < _settings_t > * setter ) {
+				tree.push_back(item_t {
 					rng,
-					unique_ptr < base_action_t >(setter),
+					unique_ptr < base_action_t < _settings_t > >(setter),
 					parent_node++
 				});
 			}
@@ -131,9 +152,10 @@ namespace command_line {
 			range_t					range;
 		};
 
+		template < class _settings_t >
 		struct context {
 			range_t			range;
-			solution_tree_t	solution_tree;
+			solution_tree_t	< _settings_t > solution_tree;
 
 			inline context_state state() const {
 				return {
@@ -154,17 +176,19 @@ namespace command_line {
 		};
 
 		// setter_t
-		template < class _exp_t, class _dest_t, class _t >
+		template < class _exp_t, class _settings_t, class _t >
 		struct setter_op {
-			_exp_t exp;
-			_t _dest_t::* address;
+			using field_t = _t _settings_t::*;
 
-			inline bool eval(context & cxt) const {
+			_exp_t exp;
+			field_t address;
+
+			inline bool eval(context < _settings_t > & cxt) const {
 				auto state = cxt.state();
 				if (exp.eval(cxt)) {
 					cxt.solution_tree.add_node(
 						state.range && cxt.range, 
-						new setter_t < _dest_t, _t >(address)
+						new setter_t < _settings_t, _t >(address)
 					);
 
 					return true;
@@ -172,7 +196,7 @@ namespace command_line {
 				return false;
 			}
 
-			inline setter_op(const _exp_t & e, _t _dest_t::*address_v) : exp(e), address(address_v) {}
+			inline setter_op(const _exp_t & e, field_t address_v) : exp(e), address(address_v) {}
 		};
 
 		template < class _derived_t >
@@ -189,7 +213,8 @@ namespace command_line {
 			_lhe_t lhe;
 			_rhe_t rhe;
 
-			inline bool eval(context & cxt) const {
+			template < class settings_t > 
+			inline bool eval(context < settings_t > & cxt) const {
 				return lhe.eval(cxt) && rhe.eval(cxt);
 			}
 		};
@@ -205,7 +230,8 @@ namespace command_line {
 			_lhe_t lhe;
 			_rhe_t rhe;
 
-			inline bool eval(context & cxt) const {
+			template < class settings_t >
+			inline bool eval(context < settings_t > & cxt) const {
 				auto
 					state = cxt.state(),
 					lhe_state = state;
@@ -243,7 +269,8 @@ namespace command_line {
 		struct z_one_op {
 			_exp_t exp;
 
-			inline bool eval(context & cxt) const {
+			template < class settings_t >
+			inline bool eval(context < settings_t > & cxt) const {
 				auto state = context_state();
 
 				if (!exp.eval(cxt))
@@ -263,7 +290,8 @@ namespace command_line {
 		struct one_n_op {
 			_exp_t exp;
 
-			inline bool eval(context & cxt) const {
+			template < class settings_t >
+			inline bool eval(context < settings_t > & cxt) const {
 				bool one_valid = exp.eval(cxt);
 
 				if (one_valid) {
@@ -290,7 +318,8 @@ namespace command_line {
 		struct z_n_op {
 			_exp_t exp;
 
-			inline bool eval(context & cxt) const {
+			template < class settings_t >
+			inline bool eval(context < settings_t > & cxt) const {
 				auto state = context_state();
 
 				do {
@@ -315,7 +344,8 @@ namespace command_line {
 
 			inline value_t ( const char * key_v ) : key (key_v) {}
 
-			inline bool eval(context & cxt) const {
+			template < class settings_t > 
+			inline bool eval(context < settings_t > & cxt) const {
 				if (cxt.range.finished ())
 					return false;
 
@@ -326,7 +356,8 @@ namespace command_line {
 
 		struct any_t : public setter_container_t < any_t > {
 
-			inline bool eval(context & cxt) const {
+			template < class settings_t >
+			inline bool eval(context < settings_t > & cxt) const {
 				if (cxt.range.finished())
 					return false;
 
@@ -337,7 +368,8 @@ namespace command_line {
 		};
 
 		// solution node inversion and execution
-		inline bool execute(details::context & cxt, details::range_t & arg_range) {
+		template < class settings_t >
+		inline bool execute(details::context < settings_t > & cxt, details::range_t & arg_range) {
 
 			auto & tree = cxt.solution_tree;
 			int solution_index = -1;
@@ -395,14 +427,14 @@ namespace command_line {
 	}
 
 	// create expression callback with parameter
-	template < class _out_t, class _exp_t >
-	inline auto usage(void (*callback)(_out_t &), const _exp_t & exp ) {
+	template < class _settings_t, class _exp_t >
+	inline auto usage(void (*callback)(_settings_t &), const _exp_t & exp ) {
 		return exp;
 	}
 
 	// parser 
 	template < class _exp_t >
-	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v) {
+	inline bool parse(const _exp_t & exp, int arg_c, const char ** arg_v) {
 		using namespace details;
 
 		auto s_range = range_t {
@@ -439,9 +471,8 @@ void show_version() {}
 int main(int arg_c, char * arg_v[]) {
 
 	using namespace command_line;
-
 	
-	char * args[] = { "garbage", "-x", "-x", "-z", "luciano", "da", "silva" };
+	const char * args[] = { "garbage", "-x", "-x", "-z", "luciano", "da", "silva" };
 	
 	//auto expression = key("-t") > key("-v") | +key("-x") > key("-v");
 
