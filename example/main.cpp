@@ -383,17 +383,53 @@ namespace command_line {
 	}
 
 	// scaners
+    struct _switch_t {
+        const char * key;
+        
+        inline _switch_t ( const char * key_v ) : key ( key_v) {}
+        
+        inline bool eval (_cxt_t & cxt) const {
+            if (cxt.range.finished ())
+                return false;
+            
+            auto v = cxt.range.consume ();
+            return strcmp (v, key) == 0;
+        }
+    };
+    
 	struct _value_t : _with_setter_t < _value_t > {
-		const char * key;
+        
+		vector < const char * > keys;
 
-		inline _value_t ( const char * key_v ) : key (key_v) {}
+		inline _value_t ( const initializer_list < const char * > & keys_v ) : keys (keys_v) {}
 
 		inline bool eval(_cxt_t & cxt) const {
 			if (cxt.range.finished ())
 				return false;
-
-			auto v = cxt.range.consume();
-			return strcmp(v, key) == 0;
+            
+            if (keys.size () == 0)
+                return false;
+            
+            // cache key
+            auto * v    = cxt.range.consume ();
+            
+            // find '=' key / value separator
+            auto * vc   = strchr (v, '=');
+            
+            if (!vc) {
+                // report malformed string
+                return false;
+            }
+            
+            size_t v_len = size_t (vc - v);
+            
+            // parse for proper
+            for ( const char * k : keys) {
+                if (strncmp (v, k, v_len) == 0)
+                    return true;
+            }
+            
+			return false;
 		}
 	};
 
@@ -467,7 +503,6 @@ namespace command_line {
                 } else {
                     // report error
                 }
-                
             
 				//node.action->run(node.range, cxt.settings);
 				i = node.sequence_index;
@@ -478,8 +513,8 @@ namespace command_line {
 	}
 
 	// scanner methods
-	inline _value_t key(const char * k) {
-		return{ k };
+	inline _value_t key( initializer_list< const char * > & keys ) {
+		return { k };
 	}
 
 	inline _any_t any() { return{}; }
