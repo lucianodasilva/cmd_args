@@ -1,5 +1,6 @@
 //#include "cmd_args.h"
 #include <iostream>
+#include <sstream>
 #include <functional>
 
 //using namespace cmd_args;
@@ -55,6 +56,23 @@ namespace command_line {
 	struct _typed_action_t : public _action_t {
 		virtual void exec ( const _range_t & range, _settings_t & settings) const = 0;
 	};
+    
+    // action for options
+    template < class _settings_t >
+    struct _option_t : public _typed_action_t < _settings_t > {
+        using field_t = bool _settings_t::*;
+        field_t address;
+        
+        _option_t (field_t address_v) : address(address_v) {}
+        
+        virtual void exec(const _range_t & range, _settings_t & settings) const override {
+            //(TODO: should raise somekind of error)
+            if (range.finished ())
+                return;
+            
+            settings.*address = true;
+        }
+    };
 
 	// setter action specialization for single items
 	template < class _settings_t, class _t >
@@ -69,11 +87,14 @@ namespace command_line {
 			if (range.finished ())
 				return;
 
-			// aditional abstraction needed
-			// perhaps should store processed value and not range...
-			//settings.*address = 
+            stringstream stream;
+            stream << range.it;
+            stream >> settings.*address;
+            
+            if (!stream) {
+                // TODO: should report error
+            }
 		}
-		
 	};
 
 	// setter specialization for vectors
@@ -86,7 +107,27 @@ namespace command_line {
 		_setter_t (field_t address_v) : address(address_v) {}
 
 		virtual void exec (const _range_t & range, _settings_t & settings) const override {
-			// same implementation as before
+            //(TODO: should raise somekind of error)
+            if (range.finished ())
+                return;
+            
+            stringstream stream;
+            
+            for ( auto it = range.it; it != range.end; ++it) {
+                stream.str ("");
+                stream.clear ();
+                
+                _t value;
+                
+                stream << range.it;
+                stream >> value;
+
+                if (stream) {
+                    (settings.*address).push_back (value);
+                } else {
+                    // TODO: should report error
+                }
+            }
 		}
 	};
 
@@ -188,7 +229,39 @@ namespace command_line {
 			range = state.range;
 		}
 	};
+    
+    // option operation
+    template < class _exp_t, class _settings_t >
+    struct _option_op {
+        using field_t = bool _settings_t::*;
+        
+        _exp_t exp;
+        field_t address;
+        
+        inline bool eval(_cxt_t & cxt) const {
+            auto state = cxt.state();
+            if (exp.eval(cxt)) {
+                cxt.solution_tree.add_node(
+                    _range_t::intersect (state.range, cxt.range),
+                    new _option_t < _settings_t >(address)
+                );
+                
+                return true;
+            }
+            return false;
+        }
+        
+        inline _option_op(const _exp_t & e, field_t address_v) : exp(e), address(address_v) {}
+    };
 
+    template < class _derived_t >
+    struct _with_option_t {
+        template < class _dest_t >
+        inline auto operator [] ( bool _dest_t::*address ) {
+            return _option_op < _derived_t, _dest_t > (*static_cast < _derived_t * > (this), address);
+        }
+    };
+    
 	// setter operation
 	template < class _exp_t, class _settings_t, class _t >
 	struct _setter_op {
@@ -383,17 +456,25 @@ namespace command_line {
 	}
 
 	// scaners
-    struct _switch_t {
-        const char * key;
+    struct _switch_t : _with_option_t< _switch_t > {
         
-        inline _switch_t ( const char * key_v ) : key ( key_v) {}
+        vector < const char * > keys;
+        
+        inline _switch_t ( const initializer_list< const char * > & keys_v ) : keys ( keys_v) {}
         
         inline bool eval (_cxt_t & cxt) const {
             if (cxt.range.finished ())
                 return false;
             
+            // cache key
             auto v = cxt.range.consume ();
-            return strcmp (v, key) == 0;
+            
+            for ( auto * k : keys ) {
+                if (strcmp (v, k) == 0)
+                    return true;
+            }
+            
+            return false;
         }
     };
     
@@ -492,7 +573,7 @@ namespace command_line {
 				i = t;
 			} while (i != -1);
             
-            settings_t settings_instance;
+            settings_t settings_instance = { 0 };
 
 			while (i != -1) {
 				auto & node = tree[i];
@@ -513,8 +594,15 @@ namespace command_line {
 	}
 
 	// scanner methods
-	inline _value_t key( initializer_list< const char * > & keys ) {
-		return { k };
+    
+    template < class _char_t >
+    inline _switch_t option ( const _char_t * v ... ) {
+        return { v };
+    }
+    
+    template < class _char_t >
+	inline _value_t key( const _char_t * v ... ) {
+        return { v };
 	}
 
 	inline _any_t any() { return{}; }
@@ -545,43 +633,38 @@ namespace command_line {
 }
 
 struct demo {
-	float	xxx;
-	float	yyy;
-	int		zzz;
-
-	vector < string > files;
-
-	bool show_version;
-	bool show_help;
+    
+    bool show_version;
+    bool show_help;
+    
+    vector < string > source_files;
+    
 };
 
-void main_usage(demo & d) {}
+void show_help (demo & d) {
+    std::cout << "demo show help" << std::endl;
+}
 
-void show_version(demo & d) {}
+void show_version(demo & d) {
+    std::cout << "demo show version" << std::endl;
+}
+
+void process (demo & d) {
+    std::cout << "demo process files" << std::endl;
+}
 
 int main(int arg_c, char * arg_v[]) {
 
 	using namespace command_line;
 	
-	const char * args[] = { "garbage", "-x", "-x", "-z", "luciano", "da", "silva" };
+	const char * args[] = { "garbage", "ficheiro1", "ficheiro2", "ficheiro3" };
 	
-	//auto expression = key("-t") > key("-v") | +key("-x") > key("-v");
-
-	auto usage_options = *(
-		key("-x") [&demo::xxx] |
-		key("-y") [&demo::yyy] |
-		key("-z") [&demo::zzz]
-	);
+    auto cmd_expr =
+        usage ( option ("-v", "--version") ) [&show_version] |
+        usage ( option ("-h", "--help")) [&show_help] |
+        usage ( +(any ())[&demo::source_files] ) [&process];
 	
-	auto usage_default_values = +any()[&demo::files];
-	
-	auto expression =
-		usage (usage_options >> usage_default_values) | //.desc ("yada yada yada ayad acoiso e tal") |
-		usage (usage_options) | //.desc ("coiso e tal")
-		usage (key("-v"))[&show_version]
-	;
-	
-	parse < demo > (expression, 7, args);
+	parse < demo > (cmd_expr, 4, args);
 	
 	//auto val = command_line::value(&demo::xxx, .0F);
 
