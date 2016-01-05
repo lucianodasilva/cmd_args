@@ -87,8 +87,7 @@ namespace command_line {
 			if (range.finished ())
 				return;
 
-            stringstream stream;
-            stream << range.it;
+            stringstream stream (*range.it);
             stream >> settings.*address;
             
             if (!stream) {
@@ -101,7 +100,6 @@ namespace command_line {
 	template < class _settings_t, class _t, class ... _other_tv >
 	struct _setter_t < _settings_t, std::vector < _t, _other_tv...> > : public _typed_action_t < _settings_t > {
 		using field_t = std::vector < _t, _other_tv...> _settings_t::*;
-
 		field_t address;
 
 		_setter_t (field_t address_v) : address(address_v) {}
@@ -114,12 +112,11 @@ namespace command_line {
             stringstream stream;
             
             for ( auto it = range.it; it != range.end; ++it) {
-                stream.str ("");
+                stringstream stream (*it);
                 stream.clear ();
                 
                 _t value;
                 
-                stream << range.it;
                 stream >> value;
 
                 if (stream) {
@@ -135,7 +132,6 @@ namespace command_line {
 	template < class _settings_t >
 	struct _callback_t : public _typed_action_t < _settings_t > {
 		using function_t = void(*)(_settings_t&);
-
 		function_t callback;
 
 		_callback_t(function_t callback_v) : callback(callback_v) {}
@@ -504,7 +500,7 @@ namespace command_line {
             
             size_t v_len = size_t (vc - v);
             
-            // parse for proper
+            // parse for proper key
             for ( const char * k : keys) {
                 if (strncmp (v, k, v_len) == 0)
                     return true;
@@ -573,7 +569,11 @@ namespace command_line {
 				i = t;
 			} while (i != -1);
             
+            // create settings instance
             settings_t settings_instance = { 0 };
+            
+            // reset position
+            i = 0;
 
 			while (i != -1) {
 				auto & node = tree[i];
@@ -661,7 +661,7 @@ int main(int arg_c, char * arg_v[]) {
 	
     auto cmd_expr =
         usage ( option ("-v", "--version") ) [&show_version] |
-        usage ( option ("-h", "--help")) [&show_help] |
+        usage ( option ("-h", "--help") ) [&show_help] |
         usage ( +(any ())[&demo::source_files] ) [&process];
 	
 	parse < demo > (cmd_expr, 4, args);
