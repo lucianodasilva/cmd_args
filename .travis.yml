@@ -4,8 +4,8 @@ compiler:
     - clang
     - gcc
 before_script:
-    - make build
+    - mkdir build
     - cd build
     - cmake ..
 script:
-    make
+    - make
