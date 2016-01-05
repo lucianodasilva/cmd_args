@@ -1,19 +1,19 @@
 language: cpp
 cache: 
-    - ccache
-    - apt
+- ccache
+- apt
 compiler:
-    - clang
-    - gcc
+- clang
+- gcc
 addons:
     apt:
         sources:
-            - kalakris-cmake
-            - george-edison55-precise-backports
+        - kalakris-cmake
+        - george-edison55-precise-backports
         packages:
-            - cmake-3.x
-            - gtest  
+        - cmake
+        - gtest  
 before_script:
-    - cmake .
+- cmake .
 script:
-    - make
+- make
