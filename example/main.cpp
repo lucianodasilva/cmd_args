@@ -48,22 +48,22 @@ namespace command_line {
 
 	};
 
-	struct _action_t {
-		virtual ~_action_t () {}
+	struct _act_t {
+		virtual ~_act_t () {}
 	};
 
 	template < class _settings_t >
-	struct _typed_action_t : public _action_t {
+	struct _typed_act_t : public _act_t {
 		virtual void exec ( const _range_t & range, _settings_t & settings) const = 0;
 	};
     
     // action for options
     template < class _settings_t >
-    struct _option_t : public _typed_action_t < _settings_t > {
+    struct _option_act_t : public _typed_act_t < _settings_t > {
         using field_t = bool _settings_t::*;
         field_t address;
         
-        _option_t (field_t address_v) : address(address_v) {}
+        _option_act_t (field_t address_v) : address(address_v) {}
         
         virtual void exec(const _range_t & range, _settings_t & settings) const override {
             //(TODO: should raise somekind of error)
@@ -76,11 +76,11 @@ namespace command_line {
 
 	// setter action specialization for single items
 	template < class _settings_t, class _t >
-	struct _setter_t : public _typed_action_t < _settings_t > {
+	struct _setter_act_t : public _typed_act_t < _settings_t > {
 		using field_t = _t _settings_t::*;
 		field_t address;
 
-		_setter_t (field_t address_v) : address(address_v) {}
+		_setter_act_t (field_t address_v) : address(address_v) {}
 
 		virtual void exec(const _range_t & range, _settings_t & settings) const override {
 			//(TODO: should raise somekind of error)
@@ -97,12 +97,12 @@ namespace command_line {
 	};
 
 	// setter specialization for vectors
-	template < class _settings_t, class _t, class ... _other_tv >
-	struct _setter_t < _settings_t, std::vector < _t, _other_tv...> > : public _typed_action_t < _settings_t > {
-		using field_t = std::vector < _t, _other_tv...> _settings_t::*;
+	template < class _settings_t, class _item_t, class ... _other_tv >
+	struct _setter_act_t < _settings_t, std::vector < _item_t, _other_tv...> > : public _typed_act_t < _settings_t > {
+		using field_t = std::vector < _item_t, _other_tv...> _settings_t::*;
 		field_t address;
 
-		_setter_t (field_t address_v) : address(address_v) {}
+		_setter_act_t (field_t address_v) : address(address_v) {}
 
 		virtual void exec (const _range_t & range, _settings_t & settings) const override {
             //(TODO: should raise somekind of error)
@@ -115,9 +115,9 @@ namespace command_line {
                 stringstream stream (*it);
                 stream.clear ();
                 
-                _t value;
+				_item_t value;
                 
-                stream >> value;
+				stream >> value;
 
                 if (stream) {
                     (settings.*address).push_back (value);
@@ -130,21 +130,22 @@ namespace command_line {
 
 	// callback action
 	template < class _settings_t >
-	struct _callback_t : public _typed_action_t < _settings_t > {
+	struct _call_act_t : public _typed_act_t < _settings_t > {
 		using function_t = void(*)(_settings_t&);
 		function_t callback;
 
-		_callback_t(function_t callback_v) : callback(callback_v) {}
+		_call_act_t(function_t callback_v) : callback(callback_v) {}
 
 		virtual void exec (const _range_t & range, _settings_t & settings) const override {
-			// implement callback
+			if (callback)
+				callback(settings);
 		}
 	};
 
 	//  execution node
 	struct _exec_node {
 		_range_t range;
-		unique_ptr < _action_t > action;
+		unique_ptr < _act_t > action;
 
 		int sequence_index;
 	};
@@ -173,10 +174,10 @@ namespace command_line {
 
 		inline _tree_t() : parent_node(-1) {}
 
-		inline void add_node (const _range_t & rng, _action_t * setter ) {
+		inline void add_node (const _range_t & rng, _act_t * setter ) {
 			tree.push_back(item_t {
 				rng,
-				unique_ptr < _action_t >(setter),
+				unique_ptr < _act_t >(setter),
 				parent_node++
 			});
 		}
@@ -239,7 +240,7 @@ namespace command_line {
             if (exp.eval(cxt)) {
                 cxt.solution_tree.add_node(
                     _range_t::intersect (state.range, cxt.range),
-                    new _option_t < _settings_t >(address)
+                    new _option_act_t < _settings_t >(address)
                 );
                 
                 return true;
@@ -271,7 +272,7 @@ namespace command_line {
 			if (exp.eval(cxt)) {
 				cxt.solution_tree.add_node(
                     _range_t::intersect (state.range, cxt.range),
-					new _setter_t < _settings_t, _t >(address)
+					new _setter_act_t < _settings_t, _t >(address)
 				);
 
 				return true;
@@ -295,14 +296,14 @@ namespace command_line {
 	struct _callback_op {
 
 		_exp_t exp;
-        typename _callback_t < _settings_t >::function_t method;
+        typename _call_act_t < _settings_t >::function_t method;
 
 		inline bool eval(_cxt_t & cxt) const {
 			auto state = cxt.state();
 			if (exp.eval(cxt)) {
 				cxt.solution_tree.add_node(
 					_range_t::intersect (state.range, cxt.range),
-					new _callback_t < _settings_t >(method)
+					new _call_act_t < _settings_t >(method)
                 );
 
 				return true;
@@ -336,7 +337,7 @@ namespace command_line {
 	};
 
 	template < class _lhe_t, class _rhe_t >
-	auto operator >> (const _lhe_t & l, const _rhe_t & r) {
+	auto operator > (const _lhe_t & l, const _rhe_t & r) {
 		return _seq_op < _lhe_t, _rhe_t > { l, r };
 	}
 
@@ -381,8 +382,10 @@ namespace command_line {
 
 	// zero or one
 	template < class _exp_t >
-	struct _z_one_op {
+	struct _z_one_op : _with_setter_t < _z_one_op < _exp_t > > {
 		_exp_t exp;
+
+		inline _z_one_op(const _exp_t & e) : exp(e) {}
 
 		inline bool eval(_cxt_t & cxt) const {
 			auto state = _cxt_state();
@@ -401,8 +404,10 @@ namespace command_line {
 
 	// one or n
 	template < class _exp_t >
-	struct _one_n_op {
+	struct _one_n_op : _with_setter_t < _one_n_op < _exp_t > > {
 		_exp_t exp;
+
+		inline _one_n_op(const _exp_t & e) : exp(e) {}
 
 		inline bool eval(_cxt_t & cxt) const {
 			bool one_valid = exp.eval(cxt);
@@ -428,8 +433,10 @@ namespace command_line {
 
 	// zero or n
 	template < class _exp_t >
-	struct _z_n_op {
+	struct _z_n_op : _with_setter_t < _z_n_op < _exp_t > > {
 		_exp_t exp;
+
+		inline _z_n_op(const _exp_t & e) : exp(e) {}
 
 		template < class cxt_t >
 		inline bool eval(cxt_t & cxt) const {
@@ -452,11 +459,11 @@ namespace command_line {
 	}
 
 	// scaners
-    struct _switch_t : _with_option_t< _switch_t > {
+    struct _option_t : _with_option_t< _option_t > {
         
         vector < const char * > keys;
         
-        inline _switch_t ( const initializer_list< const char * > & keys_v ) : keys ( keys_v) {}
+        inline _option_t ( const initializer_list< const char * > & keys_v ) : keys ( keys_v) {}
         
         inline bool eval (_cxt_t & cxt) const {
             if (cxt.range.finished ())
@@ -512,6 +519,8 @@ namespace command_line {
 
 	struct _any_t : _with_setter_t < _any_t > {
 
+		inline _any_t() {}
+
 		inline bool eval(_cxt_t & cxt) const {
 			if (cxt.range.finished())
 				return false;
@@ -543,9 +552,9 @@ namespace command_line {
 		int solution_index = -1;
 
 		for (
-			int i = 0;
-			i < static_cast < int > (tree.size());
-			++i
+			int i = static_cast <int> (tree.size() - 1);
+			i >= 0;
+			--i
 		) {
 			if (tree[i].range.end == arg_range.end) {
 				solution_index = i;
@@ -562,12 +571,12 @@ namespace command_line {
 			int i = tree[n].sequence_index;
 			tree[n].sequence_index = -1;
 
-			do {
+			while (i != -1) {
 				int t = tree[i].sequence_index;
 				tree[i].sequence_index = n;
 				n = i;
 				i = t;
-			} while (i != -1);
+			}
             
             // create settings instance
             settings_t settings_instance = { 0 };
@@ -577,7 +586,7 @@ namespace command_line {
 
 			while (i != -1) {
 				auto & node = tree[i];
-                auto typed_node = dynamic_cast < _typed_action_t < settings_t > * > (node.action.get());
+                auto typed_node = dynamic_cast < _typed_act_t < settings_t > * > (node.action.get());
                 
                 if (typed_node) {
                     typed_node->exec (node.range, settings_instance);
@@ -595,17 +604,18 @@ namespace command_line {
 
 	// scanner methods
     
-    template < class _char_t >
-    inline _switch_t option ( const _char_t * v ... ) {
-        return { v };
+    template < class ... _char_tv >
+    inline _option_t option ( const _char_tv * ... v ) {
+        return { v... };
     }
     
-    template < class _char_t >
-	inline _value_t key( const _char_t * v ... ) {
-        return { v };
+    template < class ... _char_t >
+	inline _value_t key( const _char_t * ... v ) {
+        return { v... };
 	}
 
-	inline _any_t any() { return{}; }
+	//inline _any_t any() { return{}; }
+	const _any_t any;
 
 	// create callback expression
 	template < class _exp_t >
@@ -636,6 +646,8 @@ struct demo {
     
     bool show_version;
     bool show_help;
+
+	string dude_name;
     
     vector < string > source_files;
     
@@ -656,13 +668,19 @@ void process (demo & d) {
 int main(int arg_c, char * arg_v[]) {
 
 	using namespace command_line;
+
+	//const char * args[] = { "garbage", "ficheiro1", "ficheiro2", "ficheiro3" };
+	//const char * args[] = { "garbage", "file1", "file2", "file3" };
+
+	const char * args[] = { "yada", "-v" };
 	
-	const char * args[] = { "garbage", "ficheiro1", "ficheiro2", "ficheiro3" };
-	
-    auto cmd_expr =
-        usage ( option ("-v", "--version") ) [&show_version] |
-        usage ( option ("-h", "--help") ) [&show_help] |
-        usage ( +(any ())[&demo::source_files] ) [&process];
+	auto expression = key("-x") > key("-Y") > (*key("-z"));
+
+	auto cmd_expr =
+		usage( option("-v", "--version") )[&show_version] |
+		usage( option("-h", "--help") )[&show_help] |
+		usage( (+any)[&demo::source_files] ) [&process];
+	;
 	
 	parse < demo > (cmd_expr, 4, args);
 	
@@ -674,10 +692,10 @@ int main(int arg_c, char * arg_v[]) {
 
 	// set its available arguments and options
 	command_line
-		// option ( < member field address >, < list of command switches >, < description > )
+		// option ( < member field address >, < list of command optiones >, < description > )
 		+ option(&arguments_t::show_version, { "-v", "--version" }, "shows the version of the application")
 		+ option(&arguments_t::show_usage, { "-h, --help" }, "shows this usage page")
-		// argument ( < member field address >, < list of command switches >, < description >, < is optional >, < default value > )
+		// argument ( < member field address >, < list of command optiones >, < description >, < is optional >, < default value > )
 		+ argument(&arguments_t::value_a, { "-va", "--value_a" }, "multiplicand")
 		+ argument(&arguments_t::value_b, { "-vb", "--value_b" }, "multiplier");
 
