@@ -1,10 +1,13 @@
 language: cpp
-sudo: false
+cache: 
+    - apt
 compiler:
     - clang
     - gcc
 addons:
     apt:
+        sources:
+            - kalakris-cmake
         packages:
             - cmake-3.x
             - gtest  
