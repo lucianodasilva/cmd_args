@@ -1,0 +1,11 @@
+language: cpp
+sudo: false
+compiler:
+    - clang
+    - gcc
+before_script:
+    - make build
+    - cd build
+    - cmake ..
+script:
+    make
