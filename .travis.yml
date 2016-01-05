@@ -1,19 +1,13 @@
 language: cpp
 cache: 
-- ccache
-- apt
+    directories:
+    - $HOME/cmake/
 compiler:
 - clang
-- gcc
-addons:
-    apt:
-        sources:
-        - kalakris-cmake
-        - george-edison55-precise-backports
-        packages:
-        - cmake
-        - gtest  
+install:
+
 before_script:
-- cmake .
+- . travis/update-cmake.sh
+
 script:
 - make
