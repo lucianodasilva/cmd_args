@@ -2,12 +2,14 @@ language: cpp
 cache: 
     directories:
     - $HOME/cmake/
+    
 compiler:
 - clang
 install:
+- . travis/update-cmake.sh
 
 before_script:
-- . travis/update-cmake.sh
+- cmake .
 
 script:
 - make
