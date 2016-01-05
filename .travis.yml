@@ -3,6 +3,11 @@ sudo: false
 compiler:
     - clang
     - gcc
+addons:
+    apt:
+        packages:
+            - cmake
+            - gtest  
 before_script:
     - mkdir build
     - cd build
