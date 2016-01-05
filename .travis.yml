@@ -6,11 +6,9 @@ compiler:
 addons:
     apt:
         packages:
-            - cmake
+            - cmake-3.x
             - gtest  
 before_script:
-    - mkdir build
-    - cd build
-    - cmake ..
+    - cmake .
 script:
     - make
