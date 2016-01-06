@@ -9,7 +9,8 @@ install:
 - . travis/update-cmake.sh
 
 before_script:
-- cmake .
+- mkdir build && cd build
+- cmake ..
 
 script:
 - make
