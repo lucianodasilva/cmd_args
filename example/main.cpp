@@ -1,4 +1,6 @@
 //#include "cmd_args.h"
+
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <functional>
