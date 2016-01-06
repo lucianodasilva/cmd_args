@@ -1,4 +1,5 @@
 CMAKE_BIN="$HOME/cmake/build/install/bin"
+CURRENT_PATH=$(pwd)
 
 if [ ! -d $CMAKE_BIN ]; then
 
@@ -16,4 +17,7 @@ fi
 
 cd $CMAKE_BIN
 CMAKEPATH=$(pwd)
-export path="$CMAKEPATH:$PATH"
+export PATH="$CMAKEPATH:$PATH"
+
+# restore path
+cd $CURRENT_PATH
