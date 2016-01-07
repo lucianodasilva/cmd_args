@@ -8,10 +8,10 @@ cache:
 addons:
     apt:
         sources:
-            - ubuntu-toolchain-r-test
+        - ubuntu-toolchain-r-test
         packages:
-            - clang-3.7
-            - gcc-5
+        - clang-3.7
+        - gcc-5
 notifications:
     email: false 
 os:
