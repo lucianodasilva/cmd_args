@@ -9,15 +9,15 @@ cache:
     email: false
     
 compiler:
-- clang
+    - clang
 install:
-- . travis/update-cmake.sh
-- git submodule init
+    - . travis/update-cmake.sh
+    - git submodule init
 
 before_script:
-- mkdir build && cd build
-- cmake ..
+    - mkdir build && cd build
+    - cmake ..
 
 script:
-- make
-- ./utest
+    - make
+    - ./utest
