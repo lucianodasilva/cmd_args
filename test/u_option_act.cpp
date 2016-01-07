@@ -16,7 +16,7 @@ struct unit_settings {
 TEST(unit_option_act, exec_happy) {
 	using namespace command_line;
 
-	auto opt = make_unique < _option_act_t < unit_settings > >(
+	auto opt = make_shared < _option_act_t < unit_settings > >(
 		&unit_settings::dummy
 	);
 
@@ -36,7 +36,7 @@ TEST(unit_option_act, exec_happy) {
 TEST(unit_option_act, exec_finished_range) {
 	using namespace command_line;
 
-	auto opt = make_unique < _option_act_t < unit_settings > >(
+	auto opt = make_shared < _option_act_t < unit_settings > >(
 		&unit_settings::dummy
 	);
 
