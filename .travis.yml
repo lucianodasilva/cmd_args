@@ -3,7 +3,7 @@ cache:
     directories:
     - $HOME/cmake/
     - $HOME/gtest/
- notifications:
+notifications:
     email: false 
 compiler:
 - clang
