@@ -1,8 +1,17 @@
+sudo: false
 language: cpp
 cache:
+    apt
     directories:
     - $HOME/cmake/
     - $HOME/gtest/
+addons:
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+        packages:
+            - clang-3.7
+            - gcc-5
 notifications:
     email: false 
 os:
