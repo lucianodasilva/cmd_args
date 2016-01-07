@@ -12,6 +12,7 @@ compiler:
 - clang
 install:
 - . travis/update-cmake.sh
+- git submodule init
 
 before_script:
 - mkdir build && cd build
@@ -19,3 +20,4 @@ before_script:
 
 script:
 - make
+- ./utest
