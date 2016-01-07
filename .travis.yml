@@ -1,7 +1,12 @@
 language: cpp
-cache: 
+
+cache:
     directories:
     - $HOME/cmake/
+    - $HOME/gtest/
+    
+ notifications:
+    email: false
     
 compiler:
 - clang
