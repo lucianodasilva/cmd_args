@@ -22,7 +22,7 @@
 //	}
 //};
 
-const char * test_values[] = {
+const char * range_test_values[] = {
 	"dummy 1",
 	"dummy 2",
 	"dummy 3"
@@ -32,8 +32,8 @@ TEST (unit_range_t, finished_false) {
 	using namespace command_line;
 
 	_range_t range = {
-		std::begin(test_values),
-		std::end(test_values)
+		std::begin(range_test_values),
+		std::end(range_test_values)
 	};
 
 	EXPECT_EQ(false, range.finished());
@@ -43,8 +43,8 @@ TEST (unit_range_t, finished_true) {
 	using namespace command_line;
 
 	_range_t range = {
-		std::end(test_values),
-		std::end(test_values)
+		std::end(range_test_values),
+		std::end(range_test_values)
 	};
 
 	EXPECT_EQ(true, range.finished());
@@ -54,8 +54,8 @@ TEST(unit_range_t, consume) {
 	using namespace command_line;
 
 	_range_t range = {
-		std::begin(test_values),
-		std::end(test_values)
+		std::begin(range_test_values),
+		std::end(range_test_values)
 	};
 
 	auto starting_it_value = range.it;
@@ -67,7 +67,7 @@ TEST(unit_range_t, consume) {
 	EXPECT_EQ(*starting_it_value, consume_value) 
 		<< "Consumed returned value should be the value of the current iterator value before stepping forward";
 
-	EXPECT_EQ(after_it_value, std::begin (test_values) + 1) 
+	EXPECT_EQ(after_it_value, std::begin (range_test_values) + 1)
 		<< "_range_t.consume () should stepp the iterator forward one position";
 }
 
@@ -75,13 +75,13 @@ TEST(unit_range_t, instersect_ab) {
 	using namespace command_line;
 
 	_range_t range_a = {
-		std::begin (test_values),
-		std::end(test_values)
+		std::begin (range_test_values),
+		std::end(range_test_values)
 	};
 
 	_range_t range_b = {
-		std::end(test_values) - 1,
-		std::end(test_values)
+		std::end(range_test_values) - 1,
+		std::end(range_test_values)
 	};
 
 	auto m = _range_t::intersect(range_a, range_b);
@@ -94,13 +94,13 @@ TEST(unit_range_t, instersect_ba) {
 	using namespace command_line;
 
 	_range_t range_a = {
-		std::begin(test_values),
-		std::end(test_values)
+		std::begin(range_test_values),
+		std::end(range_test_values)
 	};
 
 	_range_t range_b = {
-		std::end(test_values) - 1,
-		std::end(test_values)
+		std::end(range_test_values) - 1,
+		std::end(range_test_values)
 	};
 
 	auto m = _range_t::intersect(range_b, range_a);
