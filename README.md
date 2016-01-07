@@ -1,3 +1,5 @@
+MASTER: [![Build Status](https://travis-ci.org/lucianodasilva/cmd_args.svg?branch=master)](https://travis-ci.org/lucianodasilva/cmd_args) Dev: [![Build Status](https://travis-ci.org/lucianodasilva/cmd_args.svg?branch=dev)](https://travis-ci.org/lucianodasilva/cmd_args)
+
 # cmd_args
 Simple single header command line arguments parser:
 
