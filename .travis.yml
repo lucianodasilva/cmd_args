@@ -5,8 +5,12 @@ cache:
     - $HOME/gtest/
 notifications:
     email: false 
+os:
+- linux
+- osx
 compiler:
 - clang
+- gcc
 install:
 - . travis/update-cmake.sh
 - git submodule init

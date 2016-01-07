@@ -1,10 +1,10 @@
 # cmd_args
 Simple single header command line arguments parser:
 
-(Master) Stable: 
+Stable Branch (master): 
 [![Build Status](https://travis-ci.org/lucianodasilva/cmd_args.svg?branch=master)](https://travis-ci.org/lucianodasilva/cmd_args) 
-(Dev) Ongoing development: 
-[![Build Status](https://travis-ci.org/lucianodasilva/cmd_args.svg?branch=dev)](https://travis-ci.org/lucianodasilva/cmd_args)
+
+Development Branch (dev): [![Build Status](https://travis-ci.org/lucianodasilva/cmd_args.svg?branch=dev)](https://travis-ci.org/lucianodasilva/cmd_args)
 
 # Getting Started
 
