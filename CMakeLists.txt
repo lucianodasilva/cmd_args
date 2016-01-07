@@ -12,10 +12,11 @@ OPTION ( CMD_ARGS_BUILD_TESTS "Build unit tests" ON)
 if (${CMD_ARGS_BUILD_TESTS})
     set ( CMD_ARGS_GTEST_PATH "${CMAKE_CURRENT_LIST_DIR}/googletest" CACHE PATH "google test project path")
     
+    option (BUILD_GMOCK "" OFF)
     option (BUILD_GTEST "" ON)
     add_subdirectory (${CMD_ARGS_GTEST_PATH})
     
-    list (APPEND gtest_projects  "gmock" "gmock_main" "gtest" "gtest_main")
+    list (APPEND gtest_projects "gtest" "gtest_main")
     set_target_properties (${gtest_projects} PROPERTIES FOLDER "gtest")
     
     if (MSVC)
