@@ -6,12 +6,6 @@ cache:
     directories:
     - $HOME/cmake/
     - $HOME/gtest/
-addons:
-    apt:
-        sources:
-        - ubuntu-toolchain-r-test
-        packages:
-        - gcc-5
 notifications:
     email: false 
 os:
@@ -20,7 +14,14 @@ os:
 compiler:
 - clang
 - gcc
+addons:
+    apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - gcc-5
 install:
+- if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
 - . travis/update-cmake.sh
 - git submodule init
 before_script:
