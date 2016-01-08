@@ -242,7 +242,7 @@ namespace command_line {
 				cxt.solution_tree.add_node(
 					_range_t::intersect(state.range, cxt.range),
 					new _option_act_t < _settings_t >(address)
-					);
+				);
 
 				return true;
 			}
