@@ -9,15 +9,15 @@ const char * option_test_values[] = {
 	"dummy 3"
 };
 
-struct unit_settings {
+struct unit_option_settings {
 	bool dummy;
 };
 
 TEST(unit_option_act, exec_happy) {
 	using namespace command_line;
 
-	auto opt = make_shared < _option_act_t < unit_settings > >(
-		&unit_settings::dummy
+	auto opt = make_shared < _option_act_t < unit_option_settings > >(
+		&unit_option_settings::dummy
 	);
 
 	auto range = _range_t{
@@ -26,7 +26,7 @@ TEST(unit_option_act, exec_happy) {
 	};
 
 	// clean up settings
-	unit_settings settings = { 0 };
+	unit_option_settings settings = {};
 	
 	opt->exec(range, settings);
 
@@ -36,8 +36,8 @@ TEST(unit_option_act, exec_happy) {
 TEST(unit_option_act, exec_finished_range) {
 	using namespace command_line;
 
-	auto opt = make_shared < _option_act_t < unit_settings > >(
-		&unit_settings::dummy
+	auto opt = make_shared < _option_act_t < unit_option_settings > >(
+		&unit_option_settings::dummy
 	);
 
 	auto range = _range_t{
@@ -46,7 +46,7 @@ TEST(unit_option_act, exec_finished_range) {
 	};
 
 	// clean up settings
-	unit_settings settings = { 0 };
+	unit_option_settings settings = {};
 
 	opt->exec(range, settings);
 

@@ -569,7 +569,7 @@ namespace command_line {
 			}
 
 			// create settings instance
-			settings_t settings_instance = { 0 };
+			settings_t settings_instance = {};
 
 			// reset position
 			i = 0;
