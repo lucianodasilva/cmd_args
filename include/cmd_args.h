@@ -12,6 +12,26 @@ using namespace std;
 
 namespace command_line {
 
+	template < class _t >
+	inline bool _cast(const char * orig, _t & dest) {
+		stringstream stream(orig);
+
+		_t val = _t ();
+		stream >> val;
+
+		if (stream) {
+			dest = val;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	inline bool _cast(const char * orig, std::string & dest) {
+		dest = orig;
+		return true;
+	}
+
 	// iterator domain range 
 	struct _range_t {
 		const char
@@ -77,12 +97,8 @@ namespace command_line {
 			if (range.finished())
 				return;
 
-			stringstream stream(*range.it);
-			stream >> settings.*address;
-
-			if (!stream) {
-				// TODO: should report error
-			}
+			// TODO: evaluate cast result and report
+			_cast(*range.it, settings.*address);
 		}
 	};
 
@@ -99,17 +115,13 @@ namespace command_line {
 			if (range.finished())
 				return;
 
-			stringstream stream;
-
 			for (auto it = range.it; it != range.end; ++it) {
 				stringstream stream(*it);
 				stream.clear();
 
 				_item_t value;
 
-				stream >> value;
-
-				if (stream) {
+				if (_cast(*it, value)) {
 					(settings.*address).push_back(value);
 				} else {
 					// TODO: should report error
