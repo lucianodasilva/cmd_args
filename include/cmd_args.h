@@ -116,10 +116,7 @@ namespace command_line {
 				return;
 
 			for (auto it = range.it; it != range.end; ++it) {
-				stringstream stream(*it);
-				stream.clear();
-
-				_item_t value;
+				_item_t value = _item_t ();
 
 				if (_cast(*it, value)) {
 					(settings.*address).push_back(value);
@@ -159,6 +156,8 @@ namespace command_line {
 
 	struct _tree_t {
 	public:
+		static const int default_parent_node = -1;
+
 		using item_t = _exec_node;
 		using vector_t = vector < item_t >;
 	private:
@@ -174,13 +173,13 @@ namespace command_line {
 			return tree.size();
 		}
 
-		inline _tree_t() : parent_node(-1) {}
+		inline _tree_t() : parent_node(default_parent_node) {}
 
 		inline void add_node(const _range_t & rng, _act_t * setter) {
 			tree.push_back(item_t{
 				rng,
 				unique_ptr < _act_t >(setter),
-						   parent_node++
+				parent_node++
 			});
 		}
 
