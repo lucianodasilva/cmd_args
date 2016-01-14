@@ -34,9 +34,8 @@ namespace command_line {
 
 	// iterator domain range 
 	struct _range_t {
-		const char
-			** it,
-			** end;
+		char const * const * it;
+		char const * const * end;
 
 		// returns true if range is length is zero
 		inline bool finished() const { return it == end; }
@@ -383,13 +382,13 @@ namespace command_line {
 
 	// zero or one
 	template < class _exp_t >
-	struct _z_one_op : _with_setter_t < _z_one_op < _exp_t > > {
+	struct _z_one_op /*: _with_setter_t < _z_one_op < _exp_t > > */ {
 		_exp_t exp;
 
 		inline _z_one_op(const _exp_t & e) : exp(e) {}
 
 		inline bool eval(_cxt_t & cxt) const {
-			auto state = _cxt_state();
+			auto state = cxt.state ();
 
 			if (!exp.eval(cxt))
 				cxt.restore(state);
@@ -414,7 +413,7 @@ namespace command_line {
 			bool one_valid = exp.eval(cxt);
 
 			if (one_valid) {
-				auto state = _cxt_state();
+				auto state = cxt.state ();
 
 				do {
 					state = cxt.state();
@@ -441,7 +440,7 @@ namespace command_line {
 
 		template < class cxt_t >
 		inline bool eval(cxt_t & cxt) const {
-			auto state = _cxt_state();
+			auto state = cxt.state ();
 
 			do {
 				state = cxt.state();
@@ -626,8 +625,9 @@ namespace command_line {
 
 	// parser 
 	template < class settings_t, class _exp_t = void >
-	inline bool parse(const _exp_t & exp, int arg_c, const char ** arg_v) {
-		auto s_range = _range_t{
+	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v) {
+
+		auto s_range = _range_t {
 			+arg_v + 1,	// ignore first item
 			+arg_v + arg_c
 		};

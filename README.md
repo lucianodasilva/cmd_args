@@ -8,27 +8,33 @@ Development Branch (dev): [![Build Status](https://travis-ci.org/lucianodasilva/
 
 # Getting Started
 
-Just define a structure to hold the arguments you wish to be available
+Define a structure to hold the arguments you wish to be available
 ```c++
 struct arg_t {
   bool show_version;
-  bool show_usage
+  bool show_usage;
+  vector < string > files;
 };
 ``` 
 
-Declare the available switches to the parser in the parser:
-```c++
-parser < arg_t > command_parser;
+Declare the grammar for the command line usages you wish to be made available using the following operators:
 
-command_parser
-  + option (&arg_t::show_version, {"-v"}, "show version")
-  + option (&arg_t::show_usage, {"-h", "--help"}, "show this usage page");
-```
+ "-" - zero or one of
+ "+" - one or more of
+ "*" - zero or more of
+ ">" - sequence
+ "|" - alternation
+ 
+And the following scanners:
+ 
+ "any" - any content
+ "option" - represents a boolean. Enabled if the option is found
+ "key" - represents a value preceded by a key ( --output="file.x" )
+ 
+Use them toggether in "usages" to build expressions and trigger callbacks given successfully parsed expressions:
 
-And parse the command line arguments from main:
-```c++
-arg_t args_inst;
-command_parser.parse (arg_c, arg_v, args_inst);
-```
+auto cmd_line_exp = usage ( option ("-h", "--help") ) [&help_callback] |
+                    usage ( option ("-v", "--version") ) [&version_callback] |
+                    usage ( (*any)[&arg_t::files] ) [&process_files];
 
 Please check the example file provided for further details and a running example of usage.
