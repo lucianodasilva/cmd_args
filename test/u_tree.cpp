@@ -79,7 +79,7 @@ TEST_F(unit_tree, parent_node_default_value ) {
 	tree = _tree_t();
 	
 	auto state = tree.state();
-	EXPECT_EQ(_tree_t::default_parent_node, state.parent_node);
+	EXPECT_EQ(_tree_t_default_parent_node, state.parent_node);
 }
 
 TEST_F(unit_tree, state) {

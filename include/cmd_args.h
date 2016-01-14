@@ -153,10 +153,10 @@ namespace command_line {
 		int		parent_node;
 	};
 
+	const int _tree_t_default_parent_node = -1;
+
 	struct _tree_t {
 	public:
-		static const int default_parent_node = -1;
-
 		using item_t = _exec_node;
 		using vector_t = vector < item_t >;
 	private:
@@ -172,7 +172,7 @@ namespace command_line {
 			return tree.size();
 		}
 
-		inline _tree_t() : parent_node(default_parent_node) {}
+		inline _tree_t() : parent_node(_tree_t_default_parent_node) {}
 
 		inline void add_node(const _range_t & rng, _act_t * setter) {
 			tree.push_back(item_t{
