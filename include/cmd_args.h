@@ -546,7 +546,7 @@ namespace command_line {
 
 	// solution node inversion and execution
 	template < class settings_t >
-	inline bool _execute(_cxt_t & cxt, _range_t & arg_range) {
+	inline bool _execute(_cxt_t & cxt, _range_t & arg_range, settings_t & settings ) {
 
 		auto & tree = cxt.solution_tree;
 		int solution_index = -1;
@@ -578,9 +578,6 @@ namespace command_line {
 				i = t;
 			}
 
-			// create settings instance
-			settings_t settings_instance = {};
-
 			// reset position
 			i = 0;
 
@@ -589,12 +586,11 @@ namespace command_line {
 				auto typed_node = dynamic_cast < _typed_act_t < settings_t > * > (node.action.get());
 
 				if (typed_node) {
-					typed_node->exec(node.range, settings_instance);
+					typed_node->exec(node.range, settings);
 				} else {
 					// report error
 				}
 
-				//node.action->run(node.range, cxt.settings);
 				i = node.sequence_index;
 			}
 		}
@@ -625,7 +621,7 @@ namespace command_line {
 
 	// parser 
 	template < class settings_t, class _exp_t = void >
-	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v) {
+	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v, settings_t & settings ) {
 
 		auto s_range = _range_t {
 			+arg_v + 1,	// ignore first item
@@ -638,7 +634,14 @@ namespace command_line {
 		exp.eval(cxt);
 
 		// process and execute solutions
-		return _execute < settings_t >(cxt, s_range);
+		return _execute < settings_t >(cxt, s_range, settings);
+	}
+
+	// parser 
+	template < class settings_t, class _exp_t = void >
+	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v) {
+		settings_t settings = {};
+		return parse(exp, arg_c, arg_v, settings);
 	}
 
 }
