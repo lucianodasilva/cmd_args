@@ -95,9 +95,12 @@ namespace command_line {
 			//(TODO: should raise somekind of error)
 			if (range.finished())
 				return;
+            
+            // find '=' key / value separator
+            auto * vc = strchr(*range.it, '=') + 1;
 
 			// TODO: evaluate cast result and report
-			_cast(*range.it, settings.*address);
+			_cast(vc, settings.*address);
 		}
 	};
 
@@ -116,8 +119,11 @@ namespace command_line {
 
 			for (auto it = range.it; it != range.end; ++it) {
 				_item_t value = _item_t ();
+                
+                // find '=' key / value separator
+                auto * vc = strchr(*it, '=');
 
-				if (_cast(*it, value)) {
+				if (_cast(vc, value)) {
 					(settings.*address).push_back(value);
 				} else {
 					// TODO: should report error
