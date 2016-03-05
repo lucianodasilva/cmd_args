@@ -121,7 +121,7 @@ namespace command_line {
 				_item_t value = _item_t ();
                 
                 // find '=' key / value separator
-                auto * vc = strchr(*it, '=');
+                auto * vc = strchr(*it, '=') + 1;
 
 				if (_cast(vc, value)) {
 					(settings.*address).push_back(value);
