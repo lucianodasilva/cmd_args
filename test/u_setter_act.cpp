@@ -51,8 +51,8 @@ TEST(unit_setter_act, exec_multiple_values) {
 	);
 
 	auto range = _solution_range_t {
-		std::cbegin(setter_test_values),
-		std::cend(setter_test_values)
+		std::begin(setter_test_values),
+		std::end(setter_test_values)
 	};
 
 	// clean up settings
@@ -74,8 +74,8 @@ TEST(unit_setter_act, exec_empty_range) {
 		);
 
 	auto range = _solution_range_t {
-		std::cend(setter_test_values),
-		std::cend(setter_test_values)
+		std::end(setter_test_values),
+		std::end(setter_test_values)
 	};
 
 	// clean up settings
@@ -95,8 +95,8 @@ TEST(unit_setter_act, exec_cast_happy) {
 	);
 
 	auto range = _solution_range_t {
-		std::cbegin (setter_test_values) + 1,
-		std::cbegin (setter_test_values)	+ 2
+		std::begin (setter_test_values) + 1,
+		std::begin (setter_test_values)	+ 2
 	};
 
 	// clean up settings
@@ -116,8 +116,8 @@ TEST(unit_setter_act, exec_cast_fail) {
 		);
 
 	auto range = _solution_range_t {
-		std::cbegin(setter_test_values),
-		std::cbegin(setter_test_values) + 1
+		std::begin(setter_test_values),
+		std::begin(setter_test_values) + 1
 	};
 
 	// clean up settings

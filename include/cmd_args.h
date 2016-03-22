@@ -60,8 +60,8 @@ namespace command_line {
         template < class _t >
         inline static _base_range_t from_source (const _t & source, size_t offset) {
             return {
-                std::cbegin (source) + offset,
-                std::cend (source)
+                std::begin (source) + offset,
+                std::end (source)
             };
         }
 

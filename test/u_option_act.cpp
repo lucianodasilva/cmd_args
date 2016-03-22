@@ -40,8 +40,8 @@ TEST(unit_option_act, exec_finished_range) {
 	);
 
     auto range = _solution_range_t {
-        std::cend (option_test_values),
-        std::cend (option_test_values)
+        std::end (option_test_values),
+        std::end (option_test_values)
     };
 
 	// clean up settings

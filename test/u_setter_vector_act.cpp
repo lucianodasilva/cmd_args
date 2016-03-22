@@ -75,8 +75,8 @@ TEST(unit_setter_vector_act, exec_mult_happy_cast) {
 	);
 
 	auto range = _solution_range_t {
-		std::cbegin(setter_vector_test_values) + 1,
-		std::cbegin(setter_vector_test_values) + 3
+		std::begin(setter_vector_test_values) + 1,
+		std::begin(setter_vector_test_values) + 3
 	};
 
 	// clean up settings
