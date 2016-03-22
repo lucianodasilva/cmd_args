@@ -3,20 +3,21 @@
 #include <cmd_args.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 using namespace std;
 
-const int setter_vector_int_values[] = {
+vector < int > setter_vector_int_values = {
 	2,
 	3
 };
 
-const int setter_vector_int_values_fail[] = {
+vector < int > setter_vector_int_values_fail = {
 	2,
 	3
 };
 
-const char * setter_vector_test_values[] = {
+vector < string > setter_vector_test_values = {
 	"dummy 1",
 	"2",
 	"3",
@@ -49,14 +50,11 @@ for (decltype (unit_setter_vector_details::size (expected)) i = 0; i < unit_sett
 TEST(unit_setter_vector_act, exec_mult_happy_string) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_vector_settings, vector < string > > >(
+    auto opt = make_shared < _setter_act_t < vector < string > unit_setter_vector_settings::* > >(
 		&unit_setter_vector_settings::mult_string_value
 	);
 
-	auto range = _range_t{
-		std::begin(setter_vector_test_values),
-		std::end(setter_vector_test_values)
-	};
+    auto range = _solution_range_t::from_source (setter_vector_test_values, 0);
 
 	// clean up settings
 	unit_setter_vector_settings settings = {};
@@ -72,13 +70,13 @@ TEST(unit_setter_vector_act, exec_mult_happy_string) {
 TEST(unit_setter_vector_act, exec_mult_happy_cast) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_vector_settings, vector < int > > >(
+    auto opt = make_shared < _setter_act_t < vector < int > unit_setter_vector_settings::* > >(
 		&unit_setter_vector_settings::mult_int_value
 	);
 
-	auto range = _range_t{
-		std::begin(setter_vector_test_values) + 1,
-		std::begin(setter_vector_test_values) + 3
+	auto range = _solution_range_t {
+		std::cbegin(setter_vector_test_values) + 1,
+		std::cbegin(setter_vector_test_values) + 3
 	};
 
 	// clean up settings
@@ -95,11 +93,11 @@ TEST(unit_setter_vector_act, exec_mult_happy_cast) {
 TEST(unit_setter_vector_act, exec_mult_fail_cast) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_vector_settings, vector < int > > >(
+    auto opt = make_shared < _setter_act_t < vector < int > unit_setter_vector_settings::* > >(
 		&unit_setter_vector_settings::mult_int_value
 		);
 
-	auto range = _range_t{
+	auto range = _solution_range_t {
 		std::begin(setter_vector_test_values) + 1,
 		std::end(setter_vector_test_values)
 	};
@@ -118,11 +116,11 @@ TEST(unit_setter_vector_act, exec_mult_fail_cast) {
 TEST(unit_setter_vector_act, exec_empty_range) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_vector_settings, vector < string > > >(
+    auto opt = make_shared < _setter_act_t < vector < string > unit_setter_vector_settings::* > >(
 		&unit_setter_vector_settings::mult_string_value
 	);
 
-	auto range = _range_t{
+	auto range = _solution_range_t {
 		std::end(setter_vector_test_values),
 		std::end(setter_vector_test_values)
 	};

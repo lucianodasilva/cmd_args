@@ -3,12 +3,13 @@
 #include <cmd_args.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 using namespace std;
 
 const int setter_int_value = 2;
 
-const char * setter_test_values[] = {
+vector < string > setter_test_values = {
 	"dummy 1",
 	"2",
 	"dummy 3"
@@ -22,11 +23,11 @@ struct unit_setter_settings {
 TEST(unit_setter_act, exec_happy_string) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_settings, string > >(
+    auto opt = make_shared < _setter_act_t < string unit_setter_settings::* > >(
 		&unit_setter_settings::string_value
 	);
 
-	auto range = _range_t{
+	auto range = _solution_range_t {
 		std::begin(setter_test_values),
 		std::begin(setter_test_values) + 1
 	};
@@ -37,7 +38,7 @@ TEST(unit_setter_act, exec_happy_string) {
 	opt->exec(range, settings);
 
 	EXPECT_STREQ(
-		setter_test_values [0], 
+		setter_test_values [0].c_str (),
 		settings.string_value.c_str ()
 	) << "Setter property content should match the first value of the setter_test_values";
 }
@@ -45,13 +46,13 @@ TEST(unit_setter_act, exec_happy_string) {
 TEST(unit_setter_act, exec_multiple_values) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_settings, string > >(
+    auto opt = make_shared < _setter_act_t < string unit_setter_settings::* > >(
 		&unit_setter_settings::string_value
 	);
 
-	auto range = _range_t{
-		std::begin(setter_test_values),
-		std::end(setter_test_values)
+	auto range = _solution_range_t {
+		std::cbegin(setter_test_values),
+		std::cend(setter_test_values)
 	};
 
 	// clean up settings
@@ -60,7 +61,7 @@ TEST(unit_setter_act, exec_multiple_values) {
 	opt->exec(range, settings);
 
 	EXPECT_STREQ(
-		setter_test_values[0],
+		setter_test_values[0].c_str (),
 		settings.string_value.c_str()
 	) << "range values other than the first should be ignored";
 }
@@ -68,13 +69,13 @@ TEST(unit_setter_act, exec_multiple_values) {
 TEST(unit_setter_act, exec_empty_range) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_settings, string > >(
+    auto opt = make_shared < _setter_act_t < string unit_setter_settings::* > >(
 		&unit_setter_settings::string_value
 		);
 
-	auto range = _range_t{
-		std::end(setter_test_values),
-		std::end(setter_test_values)
+	auto range = _solution_range_t {
+		std::cend(setter_test_values),
+		std::cend(setter_test_values)
 	};
 
 	// clean up settings
@@ -89,13 +90,13 @@ TEST(unit_setter_act, exec_empty_range) {
 TEST(unit_setter_act, exec_cast_happy) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_settings, int > >(
+    auto opt = make_shared < _setter_act_t < int unit_setter_settings::* > >(
 		&unit_setter_settings::int_value
 	);
 
-	auto range = _range_t{
-		std::begin (setter_test_values) + 1,
-		std::begin (setter_test_values)	+ 2
+	auto range = _solution_range_t {
+		std::cbegin (setter_test_values) + 1,
+		std::cbegin (setter_test_values)	+ 2
 	};
 
 	// clean up settings
@@ -110,13 +111,13 @@ TEST(unit_setter_act, exec_cast_happy) {
 TEST(unit_setter_act, exec_cast_fail) {
 	using namespace command_line;
 
-	auto opt = make_shared < _setter_act_t < unit_setter_settings, int > >(
+    auto opt = make_shared < _setter_act_t < int unit_setter_settings::* > >(
 		&unit_setter_settings::int_value
 		);
 
-	auto range = _range_t{
-		std::begin(setter_test_values),
-		std::begin(setter_test_values) + 1
+	auto range = _solution_range_t {
+		std::cbegin(setter_test_values),
+		std::cbegin(setter_test_values) + 1
 	};
 
 	// clean up settings

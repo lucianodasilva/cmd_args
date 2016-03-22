@@ -2,8 +2,10 @@
 #include <cmd_args.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
-const char * option_test_values[] = {
+vector <string > option_test_values = {
 	"dummy 1",
 	"dummy 2",
 	"dummy 3"
@@ -16,14 +18,11 @@ struct unit_option_settings {
 TEST(unit_option_act, exec_happy) {
 	using namespace command_line;
 
-	auto opt = make_shared < _option_act_t < unit_option_settings > >(
+    auto opt = make_shared < _option_act_t < bool unit_option_settings::* > >(
 		&unit_option_settings::dummy
 	);
 
-	auto range = _range_t{
-		std::begin(option_test_values),
-		std::end(option_test_values)
-	};
+    auto range = _solution_range_t::from_source (option_test_values, 0);
 
 	// clean up settings
 	unit_option_settings settings = {};
@@ -36,14 +35,14 @@ TEST(unit_option_act, exec_happy) {
 TEST(unit_option_act, exec_finished_range) {
 	using namespace command_line;
 
-	auto opt = make_shared < _option_act_t < unit_option_settings > >(
+    auto opt = make_shared < _option_act_t < bool unit_option_settings::* > >(
 		&unit_option_settings::dummy
 	);
 
-	auto range = _range_t{
-		std::end(option_test_values),
-		std::end(option_test_values)
-	};
+    auto range = _solution_range_t {
+        std::cend (option_test_values),
+        std::cend (option_test_values)
+    };
 
 	// clean up settings
 	unit_option_settings settings = {};
