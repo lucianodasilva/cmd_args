@@ -452,7 +452,7 @@ namespace command_line {
         
         template < class _address_t >
         inline const _option_t & operator [] ( _address_t address) {
-            action_ctor = make_unique < _action_ctor < _address_t, _option_act_t < _address_t > > > (address);
+            action_ctor = new _action_ctor < _address_t, _option_act_t < _address_t > > (address);
             return *this;
         }
         
@@ -505,7 +505,7 @@ namespace command_line {
         
         template < class _address_t >
         inline const _value_t operator [] ( _address_t address) const {
-            action_ctor = make_unique < _action_ctor < _address_t, _setter_act_t < _address_t > > > (address);
+            action_ctor = new _action_ctor < _address_t, _setter_act_t < _address_t > > (address);
             return *this;
         }
 	};
@@ -534,7 +534,7 @@ namespace command_line {
         
         template < class _address_t >
         inline const _any_t & operator [] ( _address_t address) const {
-            action_ctor = make_unique < _action_ctor < _address_t, _setter_act_t < _address_t > > > (address);
+            action_ctor = new _action_ctor < _address_t, _setter_act_t < _address_t > > (address);
             return *this;
         }
 
@@ -566,7 +566,7 @@ namespace command_line {
         
         template < class _address_t >
         inline _usage_op < _exp_t > operator [] ( _address_t address) const {
-            action_ctor = make_unique < _action_ctor < _address_t, _call_act_t < _address_t > > > (address);
+            action_ctor = new _action_ctor < _address_t, _call_act_t < _address_t > > (address);
             return *this;
         }
 	};
