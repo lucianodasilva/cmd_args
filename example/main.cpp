@@ -52,9 +52,20 @@ int main(int arg_c, char * arg_v[]) {
 		usage(option("-h", "--help"))[&show_help] |
 		usage(main_exp)[&process];
 
-	if (!parse < demo >(cmd_line_exp, arg_c, arg_v)) {
-		std::cerr << "unexpected command line arguments" << std::endl;
-	}
+    auto res = parse < demo > (cmd_line_exp, arg_c, arg_v);
+    
+    if (!res) {
+        ::cerr << "failed parsing command line arguments with: " << ::endl;
+        
+        for (auto & err : res.messages ()) {
+            ::cerr << " - " << err;
+        }
+        
+        return 1;
+    }
+	//if (!parse < demo >(cmd_line_exp, arg_c, arg_v)) {
+		//std::cerr << "unexpected command line arguments" << std::endl;
+	//}
 
 	return 0;
 }

@@ -2,6 +2,7 @@
 #ifndef _cmd_args_h_
 #define _cmd_args_h_
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <sstream>
@@ -73,17 +74,24 @@ namespace command_line {
     using _range_t = _base_range_t < char const * const * >;
     
     //  execution nodes
-    struct _exec_cxt_t {
+    struct _error_cxt_t {
     private:
-        bool                _fail;
+        bool                _success;
         vector < string >   _messages;
     public:
         
-        inline bool has_failed () { return _fail; }
+        inline _error_cxt_t () : _success (true) {}
+        
+        inline bool success () const { return _success; }
         
         inline void warn ( const string & m ) { _messages.push_back (m); }
-        inline void error ( const string & m ) { _fail = true; _messages.push_back(m); }
+        inline void error ( const string & m ) { _success = false; _messages.push_back(m); }
         
+        inline operator bool () const {
+            return success ();
+        }
+        
+        inline const vector < string > & messages () const { return _messages; }
     };
     
     template < class _t >
@@ -126,7 +134,7 @@ namespace command_line {
 	template < class _settings_t >
 	struct _typed_act_t : public _act_t {
         virtual void exec(
-            _exec_cxt_t & cxt,
+            _error_cxt_t & cxt,
             _settings_t & settings
         ) const = 0;
 	};
@@ -142,7 +150,7 @@ namespace command_line {
 		_option_act_t(_address_t address_v, const string &) : address(address_v) {}
 
 		virtual void exec(
-            _exec_cxt_t & cxt,
+            _error_cxt_t & cxt,
             _settings_t & settings
         ) const override {
 			settings.*address = true;
@@ -162,11 +170,12 @@ namespace command_line {
 		_setter_act_t(_address_t address_v, const string & v) : address(address_v), value(v) {}
 
 		virtual void exec(
-            _exec_cxt_t & cxt,
+            _error_cxt_t & cxt,
             _settings_t & settings
         ) const override {
-			// TODO: evaluate cast result and report
-			_cast(value, settings.*address);
+            if (!_cast(value, settings.*address)){
+                cxt.error ("casting error: " + value);
+            }
 		}
 	};
 
@@ -184,9 +193,11 @@ namespace command_line {
 
 		_setter_act_t(field_t address_v, const string & v) : address(address_v), value (v) {}
 
-		virtual void exec(_exec_cxt_t & cxt, _settings_t & settings) const override {
+		virtual void exec(_error_cxt_t & cxt, _settings_t & settings) const override {
             auto v = _item_t ();
-            _cast (value, v);
+            if (!_cast (value, v)) {
+                cxt.error ("casting error: " + value);
+            }
             
             (settings.*address).push_back (v);
 		}
@@ -203,7 +214,7 @@ namespace command_line {
 		_call_act_t(_address_t callback_v, const string &) : callback(callback_v) {}
 
 		virtual void exec(
-            _exec_cxt_t & cxt,
+            _error_cxt_t & cxt,
             _settings_t & settings
         ) const override {
 			if (callback)
@@ -236,6 +247,15 @@ namespace command_line {
 		vector_t tree;
 		int32_t parent_node;
 	public:
+        
+        using iterator = vector_t::iterator;
+        using const_iterator = vector_t::const_iterator;
+        
+        inline iterator begin () { return tree.begin (); }
+        inline iterator end () { return tree.end (); }
+        
+        inline const_iterator cbegin () const { return tree.cbegin (); }
+        inline const_iterator cend () const { return tree.cend (); }
 
 		inline item_t & operator [] (size_t i) {
 			return tree[i];
@@ -590,10 +610,12 @@ namespace command_line {
 
 	// solution node inversion and execution
 	template < class settings_t >
-	inline bool _execute(_cxt_t & cxt, _range_t & arg_range, settings_t & settings ) {
+	inline _error_cxt_t _execute(_cxt_t & cxt, _range_t & arg_range, settings_t & settings ) {
 
 		auto & tree = cxt.solution_tree;
 		int solution_index = -1;
+        
+        _error_cxt_t exec_cxt;
 
 		for (
 			int i = static_cast <int> (tree.size() - 1);
@@ -606,11 +628,24 @@ namespace command_line {
 			}
 		}
 
-		if (solution_index == -1)
-			return false;
-
-		// reorder instructions and execute
-		{
+        if (solution_index == -1) {
+            
+            auto max_it = ::max_element(tree.begin (), tree.end (), [](auto & a, auto & b) -> bool {
+                return (a.range.it < b.range.it);
+            });
+            
+            const char * value = nullptr;
+            
+            if (max_it == tree.end ()) {
+                value = *cxt.range.it;
+            } else {
+                value = *(max_it->range.it + 1);
+            }
+            
+            string message ("unexpected: ");
+            exec_cxt.error (message + value);
+        } else {
+            // reorder instructions and execute
 			int n = solution_index;
 			int i = tree[n].sequence_index;
 			tree[n].sequence_index = -1;
@@ -624,7 +659,6 @@ namespace command_line {
 
 			// reset position
 			i = 0;
-            _exec_cxt_t exec_cxt;
 
 			while (i != -1) {
 				auto & node = tree[i];
@@ -633,14 +667,15 @@ namespace command_line {
 				if (typed_node) {
 					typed_node->exec(exec_cxt, settings);
 				} else {
-					// report error
+                    exec_cxt.error ("runtime error: exec node casting failed");
+                    break;
 				}
 
 				i = node.sequence_index;
 			}
 		}
-
-		return true;
+        
+		return exec_cxt;
 	}
 
 	// scanner methods
@@ -666,7 +701,7 @@ namespace command_line {
 
 	// parser 
 	template < class settings_t, class _exp_t = void >
-	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v, settings_t & settings ) {
+	inline _error_cxt_t parse(const _exp_t & exp, int arg_c, char ** arg_v, settings_t & settings ) {
 
 		auto s_range = _range_t {
 			+arg_v + 1,	// ignore first item
@@ -684,7 +719,7 @@ namespace command_line {
 
 	// parser 
 	template < class settings_t, class _exp_t = void >
-	inline bool parse(const _exp_t & exp, int arg_c, char ** arg_v) {
+	inline _error_cxt_t parse(const _exp_t & exp, int arg_c, char ** arg_v) {
 		settings_t settings = {};
 		return parse(exp, arg_c, arg_v, settings);
 	}

@@ -25,9 +25,10 @@ TEST(unit_setter_vector_act, exec_mult_happy_string) {
         setter_vector_test_value
 	);
     
+    _error_cxt_t error = {};
     auto settings = unit_setter_vector_settings {};
 
-    opt->exec(settings);
+    opt->exec(error, settings);
 
 	EXPECT_EQ(
 		setter_vector_test_value,
@@ -44,9 +45,10 @@ TEST(unit_setter_vector_act, exec_mult_happy_cast) {
 	);
 
 	// clean up settings
+    _error_cxt_t error = {};
 	unit_setter_vector_settings settings = {};
 
-	opt->exec(settings);
+	opt->exec(error, settings);
 
 	EXPECT_EQ(
 		setter_vector_int_value,
@@ -63,9 +65,10 @@ TEST(unit_setter_vector_act, exec_mult_fail_cast) {
     );
 
 	// clean up settings
+    _error_cxt_t error = {};
 	unit_setter_vector_settings settings = {};
 
-	opt->exec(settings);
+	opt->exec(error, settings);
 
 	EXPECT_EQ(
 		setter_vector_int_value_fail,

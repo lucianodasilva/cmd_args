@@ -25,9 +25,10 @@ TEST(unit_setter_act, exec_happy_string) {
 	);
 
 	// clean up settings
+    _error_cxt_t error = {};
 	unit_setter_settings settings = {};
 
-	opt->exec(settings);
+	opt->exec(error, settings);
 
 	EXPECT_STREQ(
 		setter_test_value.c_str (),
@@ -44,9 +45,10 @@ TEST(unit_setter_act, exec_cast_happy) {
 	);
 
 	// clean up settings
+    _error_cxt_t error = {};
 	unit_setter_settings settings = {};
 
-	opt->exec(settings);
+	opt->exec(error, settings);
 
 	EXPECT_EQ(setter_int_value, settings.int_value)
 		<< "casted value did not match expected value";
@@ -61,9 +63,10 @@ TEST(unit_setter_act, exec_cast_fail) {
     );
 
 	// clean up settings
+    _error_cxt_t error = {};
 	unit_setter_settings settings = {};
 
-	opt->exec(settings);
+	opt->exec(error, settings);
 
 	EXPECT_EQ(0, settings.int_value)
 		<< "cast fail should not change original value";

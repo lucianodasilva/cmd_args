@@ -24,9 +24,10 @@ TEST(unit_option_act, exec_happy) {
 	);
 
 	// clean up settings
+    _error_cxt_t error = {};
 	unit_option_settings settings = {};
 	
-	opt->exec(settings);
+	opt->exec(error, settings);
 
 	EXPECT_TRUE(settings.dummy) << "settings variable should have been set to true";
 }
