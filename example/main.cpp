@@ -38,14 +38,15 @@ void process (demo & d) {
 int main(int arg_c, char * arg_v[]) {
 
 	using namespace command_line;
-
-	// define the main usage expression separately for readability reasons
+    
+    // define the main usage expression separately for readability reasons
+    
 	auto main_exp =
-		(-option("-i")[&demo::inverse_order]) >	// zero or one -i followed by
-		key("-o", "--output")[&demo::output] >  // a mandatory -o or --output value
-		(*any)[&demo::source_files]				// into an unknown amount of anything
+		-option("-i")[&demo::inverse_order]     >	// zero or one -i followed by
+		key("-o", "--output")[&demo::output]    >   // a mandatory -o or --output value
+		*any[&demo::source_files]                   // into an unknown amount of anything
 	;
-
+     
 	auto cmd_line_exp =
 		usage(option("-v", "--version"))[&show_version] |
 		usage(option("-h", "--help"))[&show_help] |

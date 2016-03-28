@@ -36,6 +36,9 @@ namespace command_line {
 	// iterator domain range
     template < class _it_t >
 	struct _base_range_t {
+        
+        using iterator = _it_t;
+        
 		_it_t it;
 		_it_t end;
 
@@ -58,7 +61,7 @@ namespace command_line {
 		}
         
         template < class _t >
-        inline static _base_range_t from_source (const _t & source, size_t offset) {
+        inline static _base_range_t from_source (const _t & source, size_t offset = 0) {
             return {
                 std::begin (source) + offset,
                 std::end (source)
@@ -70,14 +73,6 @@ namespace command_line {
     using _range_t = _base_range_t < char const * const * >;
     
     //  execution node
-    using _solution_data = vector < string >;
-    
-    using _solution_range_t = _base_range_t < _solution_data::const_iterator >;
-
-	struct _act_t {
-		virtual ~_act_t() {}
-	};
-    
     template < class _t >
     struct _address_traits;
     
@@ -91,11 +86,33 @@ namespace command_line {
     struct _address_traits < void (*)( _t & ) > {
         using settings_type = _t;
     };
+    
+    struct _act_t {
+        virtual ~_act_t() {}
+    };
+    
+    
+    struct _base_action_ctor {
+        using shared = shared_ptr < _base_action_ctor >;
+        virtual _act_t * create_action (const string & value) const = 0;
+    };
+    
+    template < class _address_t, class _action_t >
+    struct _action_ctor : public _base_action_ctor {
+        
+        _address_t address;
+        
+        inline _action_ctor ( _address_t address_v ) : address (address_v) {}
+        
+        virtual _act_t * create_action (const string & value) const override {
+            return new _action_t (address, value);
+        }
+        
+    };
 
 	template < class _settings_t >
 	struct _typed_act_t : public _act_t {
         virtual void exec(
-            const _solution_range_t & range,
             _settings_t & settings
         ) const = 0;
 	};
@@ -108,16 +125,11 @@ namespace command_line {
 	struct _option_act_t : public _typed_act_t < _settings_t > {
         
         _address_t address;
-		_option_act_t(_address_t address_v) : address(address_v) {}
+		_option_act_t(_address_t address_v, const string &) : address(address_v) {}
 
 		virtual void exec(
-            const _solution_range_t & range,
             _settings_t & settings
         ) const override {
-			//(TODO: should raise somekind of error)
-			if (range.finished())
-				return;
-
 			settings.*address = true;
 		}
 	};
@@ -129,19 +141,16 @@ namespace command_line {
     >
 	struct _setter_act_t : public _typed_act_t < _settings_t > {
         
-		_address_t address;
-		_setter_act_t(_address_t address_v) : address(address_v) {}
+		_address_t  address;
+        string      value;
+        
+		_setter_act_t(_address_t address_v, const string & v) : address(address_v), value(v) {}
 
 		virtual void exec(
-            const _solution_range_t & range,
             _settings_t & settings
         ) const override {
-			//(TODO: should raise somekind of error)
-			if (range.finished())
-				return;
-
 			// TODO: evaluate cast result and report
-			_cast(*range.it, settings.*address);
+			_cast(value, settings.*address);
 		}
 	};
 
@@ -152,25 +161,15 @@ namespace command_line {
     >
         : public _typed_act_t < _settings_t >
     {
+        
 		using field_t = std::vector < _item_t, _other_tv...> _settings_t::*;
 		field_t address;
+        string  value;
 
-		_setter_act_t(field_t address_v) : address(address_v) {}
+		_setter_act_t(field_t address_v, const string & v) : address(address_v), value (v) {}
 
-		virtual void exec(const _solution_range_t & range, _settings_t & settings) const override {
-			//(TODO: should raise somekind of error)
-			if (range.finished())
-				return;
-
-			for (auto it = range.it; it != range.end; ++it) {
-				_item_t value = _item_t ();
-
-				if (_cast(*it, value)) {
-					(settings.*address).push_back(value);
-				} else {
-					// TODO: should report error
-				}
-			}
+		virtual void exec(_settings_t & settings) const override {
+            (settings.*address).push_back (value);
 		}
 	};
 
@@ -182,10 +181,9 @@ namespace command_line {
 	struct _call_act_t : public _typed_act_t < _settings_t > {
 		_address_t callback;
 
-		_call_act_t(_address_t callback_v) : callback(callback_v) {}
+		_call_act_t(_address_t callback_v, const string &) : callback(callback_v) {}
 
 		virtual void exec(
-            const _solution_range_t & range,
             _settings_t & settings
         ) const override {
 			if (callback)
@@ -197,8 +195,7 @@ namespace command_line {
     using _solution_data = vector < string >;
     
 	struct _exec_node {
-		_range_t                range;
-        _solution_range_t       solution;
+        _range_t                range;
 		unique_ptr < _act_t >   action;
         
 		int sequence_index;
@@ -230,10 +227,9 @@ namespace command_line {
 
 		inline _tree_t() : parent_node(_tree_t_default_parent_node) {}
 
-		inline void add_node(const _range_t & rng, const _solution_range_t & solution, _act_t * setter) {
+		inline void add_node(const _range_t & rng, _act_t * setter) {
 			tree.push_back(item_t{
 				rng,
-                solution,
 				unique_ptr < _act_t >(setter),
 				parent_node++
 			});
@@ -260,95 +256,30 @@ namespace command_line {
 	struct _cxt_state {
 		_tree_state_t	tree_state;
 		_range_t		range;
-        size_t          data_size;
 	};
 
 	struct _cxt_t {
 		_range_t		range;
 		_tree_t			solution_tree;
-        _solution_data  solution_data;
+        
+        string          value;
 
 		inline _cxt_state state() const {
 			return{
 				solution_tree.state(),
-				range,
-                solution_data.size ()
+				range
 			};
 		}
 
 		inline void restore(const _cxt_state & state) {
 			solution_tree.restore(state.tree_state);
 			range = state.range;
-            solution_data.resize (state.data_size);
 		}
 
 		inline void backtrack(const _cxt_state & state) {
 			solution_tree.backtrack(state.tree_state);
 			range = state.range;
 		}
-	};
-
-	// option operation
-    template < class _exp_t, class _address_t, class _action_t >
-    struct _action_op {
-
-        _exp_t exp;
-        _address_t address;
-        
-        inline bool eval(_cxt_t & cxt) const {
-            auto state = cxt.state();
-            if (exp.eval(cxt)) {
-                cxt.solution_tree.add_node(
-                    _range_t::intersect(state.range, cxt.range),
-                    _solution_range_t::from_source(cxt.solution_data, state.data_size),
-                    new _action_t (address)
-                );
-                
-                return true;
-            }
-            return false;
-        }
-        
-        inline _action_op (const _exp_t & e, _address_t address_v) : exp(e), address(address_v) {}
-    };
-    
-    template < class _exp_t, class _address_t >
-    using _option_op = _action_op < _exp_t, _address_t, _option_act_t < _address_t > >;
-
-	template < class _derived_t >
-	struct _with_option_t {
-        template < class _settings_t >
-        inline auto operator [] (bool _settings_t::*address) {
-            return _option_op < _derived_t, bool _settings_t::* >(*static_cast < _derived_t * > (this), address);
-		}
-	};
-
-	// setter operation
-    template < class _exp_t, class _address_t >
-    using _setter_op = _action_op < _exp_t, _address_t, _setter_act_t < _address_t > >;
-
-	template < class _derived_t >
-	struct _with_setter_t {
-		template < class _t, class _settings_t >
-        inline auto operator [] ( _t _settings_t::*address) {
-            return _setter_op < _derived_t, _t _settings_t::* >(*static_cast < _derived_t * > (this), address);
-		}
-	};
-
-	// callback operation
-    template < class _exp_t, class _settings_t >
-    using _callback_op = _action_op < _exp_t, _settings_t, _call_act_t < _settings_t > >;
-
-	template < class _derived_t >
-	struct _with_callback_t {
-		template < class _settings_t >
-		inline auto operator [] ( void (*method) (_settings_t &) ) {
-			return _callback_op < _derived_t, void (*)(_settings_t &) > {
-				*static_cast < _derived_t * > (this),
-                method
-			};
-		}
-
 	};
 
 	// sequence
@@ -408,7 +339,7 @@ namespace command_line {
 
 	// zero or one
 	template < class _exp_t >
-	struct _z_one_op /*: _with_setter_t < _z_one_op < _exp_t > > */ {
+	struct _z_one_op {
 		_exp_t exp;
 
 		inline _z_one_op(const _exp_t & e) : exp(e) {}
@@ -430,7 +361,7 @@ namespace command_line {
 
 	// one or n
 	template < class _exp_t >
-	struct _one_n_op : _with_setter_t < _one_n_op < _exp_t > > {
+	struct _one_n_op {
 		_exp_t exp;
 
 		inline _one_n_op(const _exp_t & e) : exp(e) {}
@@ -459,7 +390,7 @@ namespace command_line {
 
 	// zero or n
 	template < class _exp_t >
-	struct _z_n_op : _with_setter_t < _z_n_op < _exp_t > > {
+	struct _z_n_op {
 		_exp_t exp;
 
 		inline _z_n_op(const _exp_t & e) : exp(e) {}
@@ -485,9 +416,10 @@ namespace command_line {
 	}
 
 	// scaners
-	struct _option_t : _with_option_t< _option_t > {
+	struct _option_t {
 
-		vector < const char * > keys;
+        vector < const char * >     keys;
+        _base_action_ctor::shared   action_ctor;
 
 		inline _option_t(const initializer_list< const char * > & keys_v) : keys(keys_v) {}
 
@@ -496,22 +428,38 @@ namespace command_line {
 				return false;
 
 			// cache key
+            auto it = cxt.range.it;
 			auto v = cxt.range.consume();
 
 			for (auto * k : keys) {
                 if (strcmp(v, k) == 0) {
-                    cxt.solution_data.push_back (v);
-					return true;
+                    if (action_ctor){
+                        cxt.solution_tree.add_node (
+                            _range_t { it, it + 1 },
+                            action_ctor->create_action("")
+                        );
+                    }
+                    
+                    return true;
                 }
 			}
 
 			return false;
 		}
+        
+        template < class _address_t >
+        inline const _option_t & operator [] ( _address_t address) {
+            action_ctor = make_unique < _action_ctor < _address_t, _option_act_t < _address_t > > > (address);
+            return *this;
+        }
+        
 	};
 
-	struct _value_t : _with_setter_t < _value_t > {
+	struct _value_t {
 
-		vector < const char * > keys;
+		vector < const char * >     keys;
+        mutable _base_action_ctor::shared
+                                    action_ctor;
 
 		inline _value_t(const initializer_list < const char * > & keys_v) : keys(keys_v) {}
 
@@ -523,6 +471,7 @@ namespace command_line {
 				return false;
 
 			// cache key
+            auto it = cxt.range.it;
 			auto * v = cxt.range.consume();
 
 			// find '=' key / value separator
@@ -538,16 +487,29 @@ namespace command_line {
 			// parse for proper key
 			for (const char * k : keys) {
                 if (strncmp(v, k, v_len) == 0) {
-                    cxt.solution_data.push_back(vc + 1);
+                    if (action_ctor) {
+                        cxt.solution_tree.add_node (
+                            _range_t { it, it + 1 },
+                            action_ctor->create_action(vc + 1)
+                        );
+                    }
 					return true;
                 }
 			}
 
 			return false;
 		}
+        
+        template < class _address_t >
+        inline const _value_t operator [] ( _address_t address) const {
+            action_ctor = make_unique < _action_ctor < _address_t, _setter_act_t < _address_t > > > (address);
+            return *this;
+        }
 	};
 
-	struct _any_t : _with_setter_t < _any_t > {
+	struct _any_t {
+  
+        mutable _base_action_ctor::shared action_ctor;
 
 		inline _any_t() {}
 
@@ -555,24 +517,55 @@ namespace command_line {
 			if (cxt.range.finished())
 				return false;
 
+            auto it = cxt.range.it;
 			auto v = cxt.range.consume();
-            cxt.solution_data.push_back (v);
+            
+            if (action_ctor) {
+                cxt.solution_tree.add_node (
+                    _range_t { it, it + 1 },
+                    action_ctor->create_action(v)
+                );
+            }
 			return true;
 		}
+        
+        template < class _address_t >
+        inline const _any_t & operator [] ( _address_t address) const {
+            action_ctor = make_unique < _action_ctor < _address_t, _setter_act_t < _address_t > > > (address);
+            return *this;
+        }
 
 	};
 
 	// usage wrapper
 	template < class _exp_t >
-	struct _usage_op : _with_callback_t < _usage_op < _exp_t > > {
+	struct _usage_op {
 
-		_exp_t exp;
+		_exp_t                      exp;
+        mutable _base_action_ctor::shared
+                                    action_ctor;
 
 		inline bool eval(_cxt_t & cxt) const {
-			return exp.eval(cxt);
+            auto state = cxt.state ();
+            
+			bool res = exp.eval(cxt);
+            if (res && action_ctor) {
+                cxt.solution_tree.add_node (
+                    _range_t::intersect(state.range, cxt.range),
+                    action_ctor->create_action("")
+                );
+            }
+            
+            return res;
 		}
 
 		inline _usage_op(const _exp_t & e) : exp(e) {}
+        
+        template < class _address_t >
+        inline _usage_op < _exp_t > operator [] ( _address_t address) const {
+            action_ctor = make_unique < _action_ctor < _address_t, _call_act_t < _address_t > > > (address);
+            return *this;
+        }
 	};
 
 	// solution node inversion and execution
@@ -617,7 +610,7 @@ namespace command_line {
 				auto typed_node = dynamic_cast < _typed_act_t < settings_t > * > (node.action.get());
 
 				if (typed_node) {
-					typed_node->exec(node.solution, settings);
+					typed_node->exec(settings);
 				} else {
 					// report error
 				}
