@@ -72,7 +72,20 @@ namespace command_line {
     
     using _range_t = _base_range_t < char const * const * >;
     
-    //  execution node
+    //  execution nodes
+    struct _exec_cxt_t {
+    private:
+        bool                _fail;
+        vector < string >   _messages;
+    public:
+        
+        inline bool has_failed () { return _fail; }
+        
+        inline void warn ( const string & m ) { _messages.push_back (m); }
+        inline void error ( const string & m ) { _fail = true; _messages.push_back(m); }
+        
+    };
+    
     template < class _t >
     struct _address_traits;
     
@@ -113,6 +126,7 @@ namespace command_line {
 	template < class _settings_t >
 	struct _typed_act_t : public _act_t {
         virtual void exec(
+            _exec_cxt_t & cxt,
             _settings_t & settings
         ) const = 0;
 	};
@@ -128,6 +142,7 @@ namespace command_line {
 		_option_act_t(_address_t address_v, const string &) : address(address_v) {}
 
 		virtual void exec(
+            _exec_cxt_t & cxt,
             _settings_t & settings
         ) const override {
 			settings.*address = true;
@@ -147,6 +162,7 @@ namespace command_line {
 		_setter_act_t(_address_t address_v, const string & v) : address(address_v), value(v) {}
 
 		virtual void exec(
+            _exec_cxt_t & cxt,
             _settings_t & settings
         ) const override {
 			// TODO: evaluate cast result and report
@@ -168,7 +184,7 @@ namespace command_line {
 
 		_setter_act_t(field_t address_v, const string & v) : address(address_v), value (v) {}
 
-		virtual void exec(_settings_t & settings) const override {
+		virtual void exec(_exec_cxt_t & cxt, _settings_t & settings) const override {
             auto v = _item_t ();
             _cast (value, v);
             
@@ -187,6 +203,7 @@ namespace command_line {
 		_call_act_t(_address_t callback_v, const string &) : callback(callback_v) {}
 
 		virtual void exec(
+            _exec_cxt_t & cxt,
             _settings_t & settings
         ) const override {
 			if (callback)
@@ -452,7 +469,7 @@ namespace command_line {
         
         template < class _address_t >
         inline const _option_t & operator [] ( _address_t address) {
-            action_ctor = new _action_ctor < _address_t, _option_act_t < _address_t > > (address);
+            action_ctor.reset (new _action_ctor < _address_t, _option_act_t < _address_t > > (address));
             return *this;
         }
         
@@ -505,7 +522,7 @@ namespace command_line {
         
         template < class _address_t >
         inline const _value_t operator [] ( _address_t address) const {
-            action_ctor = new _action_ctor < _address_t, _setter_act_t < _address_t > > (address);
+            action_ctor.reset (new _action_ctor < _address_t, _setter_act_t < _address_t > > (address));
             return *this;
         }
 	};
@@ -534,7 +551,7 @@ namespace command_line {
         
         template < class _address_t >
         inline const _any_t & operator [] ( _address_t address) const {
-            action_ctor = new _action_ctor < _address_t, _setter_act_t < _address_t > > (address);
+            action_ctor.reset (new _action_ctor < _address_t, _setter_act_t < _address_t > > (address));
             return *this;
         }
 
@@ -566,7 +583,7 @@ namespace command_line {
         
         template < class _address_t >
         inline _usage_op < _exp_t > operator [] ( _address_t address) const {
-            action_ctor = new _action_ctor < _address_t, _call_act_t < _address_t > > (address);
+            action_ctor.reset (new _action_ctor < _address_t, _call_act_t < _address_t > > (address));
             return *this;
         }
 	};
@@ -607,13 +624,14 @@ namespace command_line {
 
 			// reset position
 			i = 0;
+            _exec_cxt_t exec_cxt;
 
 			while (i != -1) {
 				auto & node = tree[i];
 				auto typed_node = dynamic_cast < _typed_act_t < settings_t > * > (node.action.get());
 
 				if (typed_node) {
-					typed_node->exec(settings);
+					typed_node->exec(exec_cxt, settings);
 				} else {
 					// report error
 				}
