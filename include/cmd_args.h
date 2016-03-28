@@ -169,7 +169,10 @@ namespace command_line {
 		_setter_act_t(field_t address_v, const string & v) : address(address_v), value (v) {}
 
 		virtual void exec(_settings_t & settings) const override {
-            (settings.*address).push_back (value);
+            auto v = _item_t ();
+            _cast (value, v);
+            
+            (settings.*address).push_back (v);
 		}
 	};
 

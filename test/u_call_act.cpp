@@ -17,10 +17,10 @@ void unit_call_act_callback(unit_call_settings & settings) {
 TEST(unit_call_act, exec_callback) {
 	using namespace command_line;
 
-    auto opt = make_shared < _call_act_t < void (*)(unit_call_settings&) > >(&unit_call_act_callback);
+    auto opt = make_shared < _call_act_t < void (*)(unit_call_settings&) > >(&unit_call_act_callback, "");
 	unit_call_settings settings = {};
 
-    opt->exec(_solution_range_t {}, settings);
+    opt->exec(settings);
 
 	EXPECT_TRUE(settings.called);
 }
@@ -28,10 +28,10 @@ TEST(unit_call_act, exec_callback) {
 TEST(unit_call_act, exec_null_callback) {
 	using namespace command_line;
 
-	auto opt = make_shared < _call_act_t < void (*)(unit_call_settings&) > >(nullptr);
+	auto opt = make_shared < _call_act_t < void (*)(unit_call_settings&) > >(nullptr, "");
 	unit_call_settings settings = {};
 
-	opt->exec(_solution_range_t(), settings);
+	opt->exec(settings);
 
 	EXPECT_FALSE(settings.called);
 }

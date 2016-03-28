@@ -60,7 +60,6 @@ protected:
 inline bool unit_alt_dummy_true::eval(command_line::_cxt_t & cxt) const {
     cxt.solution_tree.add_node(
         cxt.range,
-        command_line::_solution_range_t::from_source (cxt.solution_data, 0),
         new unit_alt_dummy_node(test_inst->consume_id ())
     );
     
@@ -87,7 +86,10 @@ TEST_F(unit_alt_op, eval_tt) {
 
 	command_line::_cxt_t cxt;
 
-    cxt.solution_tree.add_node(_range_t {}, _solution_range_t {}, new unit_alt_dummy_node(this->consume_id()));
+    cxt.solution_tree.add_node(
+        _range_t {},
+        new unit_alt_dummy_node(this->consume_id())
+    );
 
 	// evaluate solution tree
 	EXPECT_TRUE(alt.eval(cxt));
@@ -109,7 +111,10 @@ TEST_F(unit_alt_op, eval_tf) {
 	);
 
 	command_line::_cxt_t cxt;
-	cxt.solution_tree.add_node(_range_t{}, _solution_range_t {}, new unit_alt_dummy_node(this->consume_id()));
+	cxt.solution_tree.add_node(
+        _range_t{},
+        new unit_alt_dummy_node(this->consume_id())
+    );
 
 	EXPECT_TRUE(alt.eval(cxt));
 
@@ -129,7 +134,7 @@ TEST_F(unit_alt_op, eval_ft) {
 	);
 
 	command_line::_cxt_t cxt;
-    cxt.solution_tree.add_node(_range_t{}, _solution_range_t {}, new unit_alt_dummy_node(this->consume_id()));
+    cxt.solution_tree.add_node(_range_t{}, new unit_alt_dummy_node(this->consume_id()));
 
 	EXPECT_TRUE(alt.eval(cxt));
 
@@ -148,7 +153,7 @@ TEST_F(unit_alt_op, eval_ff) {
 	);
 
 	command_line::_cxt_t cxt;
-    cxt.solution_tree.add_node(_range_t{}, _solution_range_t {}, new unit_alt_dummy_node(this->consume_id()));
+    cxt.solution_tree.add_node(_range_t{}, new unit_alt_dummy_node(this->consume_id()));
 
 	EXPECT_FALSE(alt.eval(cxt));
 

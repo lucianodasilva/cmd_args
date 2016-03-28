@@ -37,7 +37,7 @@ protected:
 		tree = command_line::_tree_t();
 
 		for (int i = 0; i < unit_tree_node_count; ++i) {
-			tree.add_node(_range_t(), _solution_range_t {}, new dummy_node(i));
+			tree.add_node(_range_t(), new dummy_node(i));
 		}
 	}
 
@@ -105,13 +105,13 @@ TEST_F(unit_tree, restore) {
 	int full_node_count = half_node_count * 2;
 
 	for (int i = 0; i < half_node_count; ++i) {
-		tree.add_node(_range_t(), _solution_range_t {}, new dummy_node(i));
+		tree.add_node(_range_t(), new dummy_node(i));
 	}
 
 	auto half_state = tree.state();
 
 	for (int i = 0; i < half_node_count; ++i) {
-		tree.add_node(_range_t(), _solution_range_t {}, new dummy_node(half_node_count + i));
+		tree.add_node(_range_t(), new dummy_node(half_node_count + i));
 	}
 
 	auto final_state = tree.state();
@@ -136,13 +136,13 @@ TEST_F(unit_tree, backtrack) {
 	int full_node_count = half_node_count * 2;
 
 	for (int i = 0; i < half_node_count; ++i) {
-        tree.add_node(_range_t(), _solution_range_t {}, new dummy_node(i));
+        tree.add_node(_range_t(), new dummy_node(i));
 	}
 
 	auto half_state = tree.state();
 
 	for (int i = 0; i < half_node_count; ++i) {
-		tree.add_node(_range_t(), _solution_range_t {}, new dummy_node(half_node_count + i));
+		tree.add_node(_range_t(), new dummy_node(half_node_count + i));
 	}
 
 	auto final_state = tree.state();
