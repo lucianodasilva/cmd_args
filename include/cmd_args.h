@@ -641,9 +641,13 @@ namespace command_line {
             } else {
                 value = *(max_it->range.it + 1);
             }
-            
-            string message ("unexpected: ");
-            exec_cxt.error (message + value);
+
+			if (value) {
+				string message("unexpected: ");
+				exec_cxt.error(message + value);
+			} else {
+				exec_cxt.error("unexpected: empty");
+			}
         } else {
             // reorder instructions and execute
 			int n = solution_index;
