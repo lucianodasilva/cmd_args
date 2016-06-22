@@ -568,14 +568,18 @@ namespace command_line {
             }
 			return true;
 		}
-        
-        template < class _address_t >
-        inline const _any_t & operator [] ( _address_t address) const {
-            action_ctor.reset (new _action_ctor < _address_t, _setter_act_t < _address_t > > (address));
-            return *this;
-        }
 
 	};
+    
+    struct _none_t {
+        
+        inline _none_t() {}
+        
+        inline bool eval(_cxt_t & cxt) const {
+            return cxt.range.finished();
+        }
+        
+    };
 
 	// usage wrapper
 	template < class _exp_t >
@@ -696,6 +700,8 @@ namespace command_line {
 
 	//inline _any_t any() { return{}; }
 	const _any_t any;
+    
+    const _none_t none;
 
 	// create callback expression
 	template < class _exp_t >
